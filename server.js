@@ -389,7 +389,12 @@ async function main() {
   });
 
   app.use("/api", async (req, res, next) => {
-    if (req.path === "/health" || req.path.startsWith("/auth/")) {
+    if (
+      req.path === "/health" ||
+      req.path === "/auth/login" ||
+      req.path === "/auth/register" ||
+      req.path === "/auth/logout"
+    ) {
       return next();
     }
 

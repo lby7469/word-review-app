@@ -1689,17 +1689,13 @@
       const today = todayDate();
       state.words = state.words.map((word) => {
         if (word.id !== wordId) return word;
-        const newRound = {
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-          baseDate: today,
-          intervals: REINFORCEMENT_INTERVALS.slice(),
-          completedSteps: [],
-        };
         return {
           ...word,
+          learnedDate: today,
+          intervals: state.settings.intervals.slice(),
+          completedReviews: [],
+          reinforcementRounds: [],
           lapseCount: (word.lapseCount || 0) + 1,
-          reinforcementRounds: [...(word.reinforcementRounds || []), newRound],
         };
       });
     }
@@ -1963,7 +1959,7 @@
             <div class="focus-kicker">Focus Review</div>
             <h2 class="section-title" style="margin-bottom:8px;">逐词复习模式</h2>
             <div class="desc">
-              每次只看一个单词。点击“认识”后，如果这个单词今天还有未完成的复习次数，它会自动回到队列末尾，直到今日应复习轮次全部完成。
+              每次只看一个单词。点击“认识”后，如果这个单词今天还有未完成的复习次数，它会自动回到队列末尾；如果点“不认识”，这个单词会从今天开始重新按七轮计划计数。
             </div>
           </div>
           <div class="focus-actions">
@@ -2090,7 +2086,7 @@
                   : `
                     <div class="session-meaning">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
                     ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
-                    <div class="session-tip">如果你点“认识”后这个单词今天还有剩余轮次，它会自动排到队列末尾，稍后再次出现。</div>
+                    <div class="session-tip">点“认识”会完成当前应复习轮次；点“不认识”会把这个单词从今天开始重置为新的七轮复习计划。</div>
                     <div class="session-actions">
                       <button class="btn" id="btn-session-known">认识</button>
                       <button class="btn btn-danger" id="btn-session-unknown">不认识</button>
@@ -2272,6 +2268,13 @@
         }
         state.fetchError = "";
         syncFormUI();
+      });
+
+      document.getElementById("input-word").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        if (!state.form.word.trim() || state.isFetchingMeaning) return;
+        void addWord();
       });
 
       document.getElementById("input-note").addEventListener("input", (e) => {

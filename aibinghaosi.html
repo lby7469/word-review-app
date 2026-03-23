@@ -237,7 +237,7 @@
 
     .tabs {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
       background: rgba(255,255,255,0.62);
       backdrop-filter: blur(16px);
@@ -782,6 +782,150 @@
       letter-spacing: -0.02em;
     }
 
+    .focus-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .focus-copy {
+      flex: 1 1 320px;
+    }
+
+    .focus-kicker {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.1);
+      color: #0f766e;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .focus-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .session-wrap {
+      display: grid;
+      gap: 18px;
+    }
+
+    .session-card {
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 30%),
+        linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244, 249, 246, 0.82));
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .session-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .session-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid rgba(111, 138, 131, 0.18);
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .session-progress {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .session-main {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      gap: 18px;
+      padding: 20px 0 28px;
+    }
+
+    .session-word {
+      font-size: clamp(42px, 8vw, 76px);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.06em;
+      color: var(--text);
+    }
+
+    .session-meaning {
+      max-width: 720px;
+      font-size: 24px;
+      line-height: 1.7;
+      color: var(--text-soft);
+    }
+
+    .session-note {
+      max-width: 700px;
+      margin: 0 auto;
+      font-size: 15px;
+      line-height: 1.9;
+      color: var(--muted);
+    }
+
+    .session-tip {
+      max-width: 52ch;
+      margin: 0 auto;
+      font-size: 15px;
+      line-height: 1.9;
+      color: var(--muted);
+    }
+
+    .session-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .session-actions .btn {
+      min-width: 148px;
+    }
+
+    .session-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-top: 18px;
+      border-top: 1px solid rgba(111, 138, 131, 0.14);
+    }
+
+    .session-meta {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
     @media (max-width: 980px) {
       .grid-top,
       .two-col,
@@ -798,7 +942,7 @@
     @media (max-width: 720px) {
       .container { padding: 16px 14px 28px; }
       .title { font-size: 24px; }
-      .tabs { grid-template-columns: 1fr 1fr 1fr; }
+      .tabs { grid-template-columns: 1fr 1fr; }
       .due-card { flex-direction: column; }
       .due-side { flex: 1 1 auto; }
       .all-top { align-items: stretch; }
@@ -813,6 +957,9 @@
       .icon-btns { width: 100%; }
       .icon-btns > * { flex: 1; }
       .pill-list .pill { align-items: flex-start; flex-direction: column; }
+      .session-card { min-height: 460px; }
+      .session-footer { align-items: stretch; }
+      .session-footer > * { width: 100%; }
     }
   </style>
 </head>
@@ -876,11 +1023,13 @@
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="today">今日复习</button>
+      <button class="tab-btn" data-tab="session">专注复习</button>
       <button class="tab-btn" data-tab="add">新增单词</button>
       <button class="tab-btn" data-tab="all">全部单词</button>
     </div>
 
     <div id="tab-today" class="tab-shell">
+      <div id="today-focus-panel" class="card surface-panel"></div>
       <div id="today-list" class="list"></div>
       <div id="today-empty" class="empty hidden">
         <div class="empty-copy">
@@ -888,6 +1037,10 @@
           <div>你今天已经完成了复习，或者还没有到需要复习的日期。</div>
         </div>
       </div>
+    </div>
+
+    <div id="tab-session" class="tab-shell hidden">
+      <div id="session-panel" class="session-wrap"></div>
     </div>
 
     <div id="tab-add" class="tab-shell hidden">
@@ -978,6 +1131,10 @@
       syncStatus: "正在验证登录状态",
       backendReady: false,
       currentUser: null,
+      reviewSession: {
+        queue: [],
+        revealed: false,
+      },
       form: {
         word: "",
         meaning: "",
@@ -1384,6 +1541,67 @@
         .sort((a, b) => a.learnedDate.localeCompare(b.learnedDate));
     }
 
+    function buildReviewSessionQueue() {
+      return getDueToday().map((word) => word.id);
+    }
+
+    function getWordById(wordId) {
+      return state.words.find((word) => word.id === wordId) || null;
+    }
+
+    function getEnrichedWord(wordId) {
+      const word = getWordById(wordId);
+      if (!word) return null;
+      const today = todayDate();
+      return {
+        ...word,
+        dueSteps: getAllDueSteps(word, today),
+        nextPending: getNextPendingStep(word, today),
+      };
+    }
+
+    function normalizeReviewSessionQueue() {
+      const nextQueue = [];
+      for (const wordId of state.reviewSession.queue) {
+        const item = getEnrichedWord(wordId);
+        if (item && item.dueSteps.length > 0) {
+          nextQueue.push(wordId);
+        }
+      }
+      state.reviewSession.queue = nextQueue;
+      return nextQueue;
+    }
+
+    function getCurrentSessionWord() {
+      const queue = normalizeReviewSessionQueue();
+      if (!queue.length) return null;
+      return getEnrichedWord(queue[0]);
+    }
+
+    function startReviewSession(reset = true) {
+      if (reset || !state.reviewSession.queue.length) {
+        state.reviewSession.queue = buildReviewSessionQueue();
+      }
+      state.reviewSession.revealed = false;
+      state.currentTab = "session";
+      render();
+    }
+
+    function finishReviewTurn(wordId) {
+      const currentId = state.reviewSession.queue[0];
+      if (currentId === wordId) {
+        state.reviewSession.queue.shift();
+      } else {
+        state.reviewSession.queue = state.reviewSession.queue.filter((id, index) => !(id === wordId && index !== 0));
+      }
+
+      const updated = getEnrichedWord(wordId);
+      if (updated && updated.dueSteps.length > 0) {
+        state.reviewSession.queue.push(wordId);
+      }
+      state.reviewSession.revealed = false;
+    }
+
     function getFilteredWords() {
       const today = todayDate();
       const result = state.words.filter((word) => wordMatchesQuery(word, state.query));
@@ -1400,7 +1618,7 @@
       return result;
     }
 
-    function markReviewDone(wordId, step, source = "main", reinforcementId) {
+    function applyReviewDone(wordId, step, source = "main", reinforcementId) {
       state.words = state.words.map((word) => {
         if (word.id !== wordId) return word;
 
@@ -1420,7 +1638,10 @@
           }),
         };
       });
+    }
 
+    function markReviewDone(wordId, step, source = "main", reinforcementId) {
+      applyReviewDone(wordId, step, source, reinforcementId);
       void persist();
       render();
     }
@@ -1433,7 +1654,7 @@
       markReviewDone(wordId, next.step, next.source, next.reinforcementId);
     }
 
-    function markWordUnknown(wordId) {
+    function applyWordUnknown(wordId) {
       const today = todayDate();
       state.words = state.words.map((word) => {
         if (word.id !== wordId) return word;
@@ -1450,7 +1671,35 @@
           reinforcementRounds: [...(word.reinforcementRounds || []), newRound],
         };
       });
+    }
 
+    function markWordUnknown(wordId) {
+      applyWordUnknown(wordId);
+      void persist();
+      render();
+    }
+
+    function revealSessionMeaning() {
+      const current = getCurrentSessionWord();
+      if (!current) return;
+      state.reviewSession.revealed = true;
+      render();
+    }
+
+    function answerSessionKnown() {
+      const current = getCurrentSessionWord();
+      if (!current || !current.nextPending) return;
+      applyReviewDone(current.id, current.nextPending.step, current.nextPending.source, current.nextPending.reinforcementId);
+      finishReviewTurn(current.id);
+      void persist();
+      render();
+    }
+
+    function answerSessionUnknown() {
+      const current = getCurrentSessionWord();
+      if (!current) return;
+      applyWordUnknown(current.id);
+      finishReviewTurn(current.id);
       void persist();
       render();
     }
@@ -1621,6 +1870,7 @@
         btn.classList.toggle("active", btn.dataset.tab === tab);
       });
       document.getElementById("tab-today").classList.toggle("hidden", tab !== "today");
+      document.getElementById("tab-session").classList.toggle("hidden", tab !== "session");
       document.getElementById("tab-add").classList.toggle("hidden", tab !== "add");
       document.getElementById("tab-all").classList.toggle("hidden", tab !== "all");
     }
@@ -1672,9 +1922,26 @@
 
     function renderToday() {
       const dueToday = getDueToday();
+      const focusPanelEl = document.getElementById("today-focus-panel");
       const listEl = document.getElementById("today-list");
       const emptyEl = document.getElementById("today-empty");
       listEl.innerHTML = "";
+      focusPanelEl.innerHTML = `
+        <div class="focus-entry">
+          <div class="focus-copy">
+            <div class="focus-kicker">Focus Review</div>
+            <h2 class="section-title" style="margin-bottom:8px;">逐词复习模式</h2>
+            <div class="desc">
+              每次只看一个单词。点击“认识”后，如果这个单词今天还有未完成的复习次数，它会自动回到队列末尾，直到今日应复习轮次全部完成。
+            </div>
+          </div>
+          <div class="focus-actions">
+            <button class="btn" id="btn-start-session" ${dueToday.length ? "" : "disabled"}>开始专注复习</button>
+            <button class="btn btn-outline" id="btn-reset-session" ${dueToday.length ? "" : "disabled"}>重新生成队列</button>
+          </div>
+        </div>
+        <div class="muted">当前共有 ${dueToday.length} 个待复习单词，进入后会按队列逐个展示。</div>
+      `;
 
       if (!dueToday.length) {
         emptyEl.classList.remove("hidden");
@@ -1743,6 +2010,77 @@
         `;
         listEl.appendChild(card);
       }
+    }
+
+    function renderSession() {
+      const panelEl = document.getElementById("session-panel");
+      const current = getCurrentSessionWord();
+      const totalWords = state.reviewSession.queue.length;
+
+      if (!current) {
+        panelEl.innerHTML = `
+          <div class="empty">
+            <div class="empty-copy">
+              <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">今日专注复习已完成</div>
+              <div>当前队列里已经没有待处理的单词了。你可以回到“今日复习”查看明细，或稍后再开始新一轮。</div>
+              <div class="focus-actions" style="justify-content:center; margin-top:18px;">
+                <button class="btn" id="btn-session-restart">重新扫描今日队列</button>
+                <button class="btn btn-outline" id="btn-session-back">返回今日复习</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const remainingSteps = current.dueSteps.length;
+      panelEl.innerHTML = `
+        <div class="card session-card">
+          <div>
+            <div class="session-top">
+              <div>
+                <div class="focus-kicker">Daily Session</div>
+                <h2 class="section-title" style="margin-bottom:8px;">专注复习</h2>
+                <div class="session-progress">当前队列还有 ${totalWords} 个单词待过一遍，${escapeHtml(current.word)} 今天还剩 ${remainingSteps} 次待处理。</div>
+              </div>
+              <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
+            </div>
+
+            <div class="session-main">
+              <div class="session-word">${escapeHtml(current.word)}</div>
+              ${
+                !state.reviewSession.revealed
+                  ? `
+                    <div class="session-tip">先看单词，自己回想词义。准备好后再展开答案。</div>
+                    <div class="session-actions">
+                      <button class="btn" id="btn-session-reveal">显示释义</button>
+                    </div>
+                  `
+                  : `
+                    <div class="session-meaning">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
+                    ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
+                    <div class="session-tip">如果你点“认识”后这个单词今天还有剩余轮次，它会自动排到队列末尾，稍后再次出现。</div>
+                    <div class="session-actions">
+                      <button class="btn" id="btn-session-known">认识</button>
+                      <button class="btn btn-danger" id="btn-session-unknown">不认识</button>
+                    </div>
+                  `
+              }
+            </div>
+          </div>
+
+          <div class="session-footer">
+            <div class="session-meta">
+              当前优先复习：${escapeHtml(current.nextPending?.label || "已完成")}<br />
+              今日待复习轮次：${escapeHtml(current.dueSteps.map((step) => step.label).join("、"))}
+            </div>
+            <div class="focus-actions">
+              <button class="btn btn-outline" id="btn-session-rescan">重新生成队列</button>
+              <button class="btn btn-outline" id="btn-session-exit">返回今日复习</button>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     function renderAllWords() {
@@ -1837,13 +2175,45 @@
       renderTop();
       syncFormUI();
       renderToday();
+      renderSession();
       renderAllWords();
       setTab(state.currentTab);
     }
 
     function bindEvents() {
       document.querySelectorAll(".tab-btn").forEach((btn) => {
-        btn.addEventListener("click", () => setTab(btn.dataset.tab));
+        btn.addEventListener("click", () => {
+          if (btn.dataset.tab === "session" && !state.reviewSession.queue.length) {
+            startReviewSession(true);
+            return;
+          }
+          setTab(btn.dataset.tab);
+        });
+      });
+
+      document.addEventListener("click", (event) => {
+        const target = event.target.closest("button");
+        if (!target) return;
+
+        if (target.id === "btn-start-session" || target.id === "btn-reset-session" || target.id === "btn-session-restart" || target.id === "btn-session-rescan") {
+          startReviewSession(true);
+          return;
+        }
+        if (target.id === "btn-session-back" || target.id === "btn-session-exit") {
+          setTab("today");
+          return;
+        }
+        if (target.id === "btn-session-reveal") {
+          revealSessionMeaning();
+          return;
+        }
+        if (target.id === "btn-session-known") {
+          answerSessionKnown();
+          return;
+        }
+        if (target.id === "btn-session-unknown") {
+          answerSessionUnknown();
+        }
       });
 
       document.getElementById("btn-logout").addEventListener("click", async () => {
@@ -1924,6 +2294,7 @@
       setInterval(() => {
         renderTop();
         renderToday();
+        renderSession();
         renderAllWords();
       }, 1000);
     }

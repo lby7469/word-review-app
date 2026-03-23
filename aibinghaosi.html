@@ -332,11 +332,28 @@
       display: inline-flex;
       align-items: center;
       border-radius: 999px;
-      background: var(--danger-bg);
-      color: var(--danger);
+      background: var(--warn-bg);
+      color: var(--warn-text);
       padding: 6px 10px;
       font-size: 12px;
       font-weight: 700;
+      border: 1px solid rgba(245, 158, 11, 0.14);
+    }
+
+    .warn-badge.high {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: rgba(220, 38, 38, 0.16);
+    }
+
+    .lapse-text {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--warn-text);
+    }
+
+    .lapse-text.high {
+      color: var(--danger);
     }
 
     .pill-list {
@@ -1649,6 +1666,27 @@
       return result;
     }
 
+    function getLapseMeta(lapseCount) {
+      if (!lapseCount || lapseCount <= 0) {
+        return {
+          badgeClass: "",
+          textClass: "",
+        };
+      }
+
+      if (lapseCount >= 3) {
+        return {
+          badgeClass: "high",
+          textClass: "high",
+        };
+      }
+
+      return {
+        badgeClass: "",
+        textClass: "",
+      };
+    }
+
     function applyReviewDone(wordId, step, source = "main", reinforcementId) {
       state.words = state.words.map((word) => {
         if (word.id !== wordId) return word;
@@ -1980,6 +2018,7 @@
       for (const word of dueToday) {
         const revealed = !!state.revealState[word.id];
         const nextPending = getNextPendingStep(word, todayDate());
+        const lapseMeta = getLapseMeta(word.lapseCount || 0);
 
         const dueStepsHtml = word.dueSteps
           .map((step) => `
@@ -2000,7 +2039,7 @@
             <div class="due-main">
               <div class="due-top">
                 <div class="due-word">${escapeHtml(word.word)}</div>
-                ${word.lapseCount > 0 ? `<span class="warn-badge">强化 ${word.lapseCount} 次</span>` : ""}
+                ${word.lapseCount > 0 ? `<span class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${word.lapseCount} 次</span>` : ""}
               </div>
 
               <div class="review-panel">
@@ -2061,6 +2100,7 @@
       }
 
       const remainingSteps = current.dueSteps.length;
+      const lapseMeta = getLapseMeta(current.lapseCount || 0);
       panelEl.innerHTML = `
         <div class="card session-card">
           <div>
@@ -2070,7 +2110,10 @@
                 <h2 class="section-title" style="margin-bottom:8px;">专注复习</h2>
                 <div class="session-progress">当前队列还有 ${totalWords} 个单词待过一遍，${escapeHtml(current.word)} 今天还剩 ${remainingSteps} 次待处理。</div>
               </div>
-              <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
+              <div class="focus-actions">
+                <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
+                ${current.lapseCount > 0 ? `<div class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${current.lapseCount} 次</div>` : ""}
+              </div>
             </div>
 
             <div class="session-main">
@@ -2125,6 +2168,7 @@
       emptyEl.classList.add("hidden");
 
       for (const word of words) {
+        const lapseMeta = getLapseMeta(word.lapseCount || 0);
         const plan = [
           ...buildMainPlan(word.learnedDate, word.intervals || DEFAULT_INTERVALS).map((item) => ({
             ...item,
@@ -2177,7 +2221,7 @@
           </div>
 
           ${word.note ? `<div class="word-note">${escapeHtml(word.note)}</div>` : ""}
-          ${word.lapseCount > 0 ? `<div style="font-size:14px; color:#dc2626; margin-bottom:8px;">强化次数：${word.lapseCount}</div>` : ""}
+          ${word.lapseCount > 0 ? `<div class="lapse-text ${lapseMeta.textClass}">遗忘次数：${word.lapseCount}</div>` : ""}
 
           <div class="progress-wrap">
             <div class="progress-row">

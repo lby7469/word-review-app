@@ -1561,8 +1561,8 @@
 
     function getStats() {
       const today = todayDate();
-      const dueWords = state.words.filter((word) => getAllDueSteps(word, today).length > 0);
-      const totalDueSteps = state.words.reduce((sum, word) => sum + getAllDueSteps(word, today).length, 0);
+      const dueWords = state.words.filter((word) => getDueReviewUnits(word, today).length > 0);
+      const totalDueSteps = state.words.reduce((sum, word) => sum + getDueReviewUnits(word, today).length, 0);
       const todayLearned = state.words.filter((word) => word.learnedDate === today).length;
 
       return {
@@ -1578,10 +1578,10 @@
       return state.words
         .map((word) => ({
           ...word,
-          dueSteps: getAllDueSteps(word, today),
-          nextPending: getNextPendingStep(word, today),
+          dueUnits: getDueReviewUnits(word, today),
+          nextPending: getNextPendingUnit(word, today),
         }))
-        .filter((word) => word.dueSteps.length > 0)
+        .filter((word) => word.dueUnits.length > 0)
         .sort((a, b) => a.learnedDate.localeCompare(b.learnedDate));
     }
 
@@ -1599,8 +1599,8 @@
       const today = todayDate();
       return {
         ...word,
-        dueSteps: getAllDueSteps(word, today),
-        nextPending: getNextPendingStep(word, today),
+        dueUnits: getDueReviewUnits(word, today),
+        nextPending: getNextPendingUnit(word, today),
       };
     }
 
@@ -1608,7 +1608,7 @@
       const nextQueue = [];
       for (const wordId of state.reviewSession.queue) {
         const item = getEnrichedWord(wordId);
-        if (item && item.dueSteps.length > 0) {
+        if (item && item.dueUnits.length > 0) {
           nextQueue.push(wordId);
         }
       }
@@ -1644,7 +1644,7 @@
       }
 
       const updated = getEnrichedWord(wordId);
-      if (updated && updated.dueSteps.length > 0) {
+      if (updated && updated.dueUnits.length > 0) {
         state.reviewSession.queue.push(wordId);
       }
       state.reviewSession.revealed = false;
@@ -1661,9 +1661,35 @@
         return [...result].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       }
       if (state.sortBy === "due") {
-        return [...result].sort((a, b) => getAllDueSteps(b, today).length - getAllDueSteps(a, today).length);
+        return [...result].sort((a, b) => getDueReviewUnits(b, today).length - getDueReviewUnits(a, today).length);
       }
       return result;
+    }
+
+    function groupStepsByReviewDate(steps) {
+      const groups = new Map();
+      for (const item of steps) {
+        const bucket = groups.get(item.reviewDate) || [];
+        bucket.push(item);
+        groups.set(item.reviewDate, bucket);
+      }
+
+      return Array.from(groups.entries())
+        .map(([reviewDate, items]) => ({
+          reviewDate,
+          items,
+          label: items.map((item) => item.label).join(" / "),
+        }))
+        .sort((a, b) => a.reviewDate.localeCompare(b.reviewDate));
+    }
+
+    function getDueReviewUnits(word, today) {
+      return groupStepsByReviewDate(getAllDueSteps(word, today));
+    }
+
+    function getNextPendingUnit(word, today) {
+      const dueUnits = getDueReviewUnits(word, today);
+      return dueUnits[0] || null;
     }
 
     function getLapseMeta(lapseCount) {
@@ -1688,23 +1714,33 @@
     }
 
     function applyReviewDone(wordId, step, source = "main", reinforcementId) {
+      applyReviewItemsDone(wordId, [{ step, source, reinforcementId }]);
+    }
+
+    function applyReviewItemsDone(wordId, items) {
       state.words = state.words.map((word) => {
         if (word.id !== wordId) return word;
 
-        if (source === "main") {
-          const set = new Set(word.completedReviews || []);
-          set.add(step);
-          return { ...word, completedReviews: Array.from(set).sort((a, b) => a - b) };
-        }
+        const mainSet = new Set(word.completedReviews || []);
+        const reinforcementMap = new Map(
+          (word.reinforcementRounds || []).map((round) => [round.id, new Set(round.completedSteps || [])])
+        );
+
+        items.forEach((item) => {
+          if (item.source === "main") {
+            mainSet.add(item.step);
+          } else if (item.reinforcementId) {
+            reinforcementMap.get(item.reinforcementId)?.add(item.step);
+          }
+        });
 
         return {
           ...word,
-          reinforcementRounds: (word.reinforcementRounds || []).map((round) => {
-            if (round.id !== reinforcementId) return round;
-            const set = new Set(round.completedSteps || []);
-            set.add(step);
-            return { ...round, completedSteps: Array.from(set).sort((a, b) => a - b) };
-          }),
+          completedReviews: Array.from(mainSet).sort((a, b) => a - b),
+          reinforcementRounds: (word.reinforcementRounds || []).map((round) => ({
+            ...round,
+            completedSteps: Array.from(reinforcementMap.get(round.id) || []).sort((a, b) => a - b),
+          })),
         };
       });
     }
@@ -1718,9 +1754,11 @@
     function markWordKnown(wordId) {
       const target = state.words.find((word) => word.id === wordId);
       if (!target) return;
-      const next = getNextPendingStep(target, todayDate());
+      const next = getNextPendingUnit(target, todayDate());
       if (!next) return;
-      markReviewDone(wordId, next.step, next.source, next.reinforcementId);
+      applyReviewItemsDone(wordId, next.items);
+      void persist();
+      render();
     }
 
     function applyWordUnknown(wordId) {
@@ -1754,8 +1792,18 @@
     function answerSessionKnown() {
       const current = getCurrentSessionWord();
       if (!current || !current.nextPending) return;
-      applyReviewDone(current.id, current.nextPending.step, current.nextPending.source, current.nextPending.reinforcementId);
+      applyReviewItemsDone(current.id, current.nextPending.items);
       finishReviewTurn(current.id);
+      void persist();
+      render();
+    }
+
+    function markDueUnitDone(wordId, reviewDate) {
+      const target = getWordById(wordId);
+      if (!target) return;
+      const unit = getDueReviewUnits(target, todayDate()).find((item) => item.reviewDate === reviewDate);
+      if (!unit) return;
+      applyReviewItemsDone(wordId, unit.items);
       void persist();
       render();
     }
@@ -2020,12 +2068,12 @@
         const nextPending = getNextPendingStep(word, todayDate());
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
 
-        const dueStepsHtml = word.dueSteps
-          .map((step) => `
+        const dueStepsHtml = word.dueUnits
+          .map((unit) => `
             <div class="pill">
-              ${escapeHtml(step.label)}（应复习日期：${escapeHtml(step.reviewDate)}）
+              ${escapeHtml(unit.label)}（应复习日期：${escapeHtml(unit.reviewDate)}）
               <button class="btn btn-outline due-step-btn"
-                onclick="window.__app.markReviewDone('${word.id}', ${step.step}, '${step.source}', ${step.reinforcementId ? `'${step.reinforcementId}'` : "undefined"})">
+                onclick="window.__app.markDueUnitDone('${word.id}', '${unit.reviewDate}')">
                 直接标完成
               </button>
             </div>
@@ -2099,7 +2147,7 @@
         return;
       }
 
-      const remainingSteps = current.dueSteps.length;
+      const remainingSteps = current.dueUnits.length;
       const lapseMeta = getLapseMeta(current.lapseCount || 0);
       panelEl.innerHTML = `
         <div class="card session-card">
@@ -2140,9 +2188,9 @@
           </div>
 
           <div class="session-footer">
-            <div class="session-meta">
-              当前优先复习：${escapeHtml(current.nextPending?.label || "已完成")}<br />
-              今日待复习轮次：${escapeHtml(current.dueSteps.map((step) => step.label).join("、"))}
+              <div class="session-meta">
+                当前优先复习：${escapeHtml(current.nextPending?.label || "已完成")}<br />
+              今日待复习轮次：${escapeHtml(current.dueUnits.map((unit) => unit.label).join("、"))}
             </div>
             <div class="focus-actions">
               <button class="btn btn-outline" id="btn-session-rescan">重新生成队列</button>
@@ -2186,7 +2234,7 @@
           return a.step - b.step;
         });
 
-        const dueSteps = getAllDueSteps(word, today);
+        const dueUnits = getDueReviewUnits(word, today);
         const progress = getProgress(word);
 
         const planHtml = plan
@@ -2236,7 +2284,7 @@
             ${planHtml}
           </div>
 
-          ${dueSteps.length > 0 ? `<div class="footer-due" style="margin-top:14px;">当前待复习：${escapeHtml(dueSteps.map((s) => s.label).join("、"))}</div>` : ""}
+          ${dueUnits.length > 0 ? `<div class="footer-due" style="margin-top:14px;">当前待复习：${escapeHtml(dueUnits.map((s) => s.label).join("、"))}</div>` : ""}
         `;
         cardsEl.appendChild(card);
       }
@@ -2343,6 +2391,9 @@
       },
       markReviewDone(wordId, step, source, reinforcementId) {
         markReviewDone(wordId, step, source, reinforcementId);
+      },
+      markDueUnitDone(wordId, reviewDate) {
+        markDueUnitDone(wordId, reviewDate);
       },
       markWordKnown(wordId) {
         markWordKnown(wordId);

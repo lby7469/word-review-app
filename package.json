@@ -1,0 +1,14 @@
+{
+  "name": "word-review-cloud-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "登录保护 + 云端同步的单词记忆与复习应用",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.16.3"
+  }
+}

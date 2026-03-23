@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 - 单词记忆与复习</title>
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --card: rgba(255, 255, 255, 0.82);
+      --text: #22302e;
+      --muted: #61706b;
+      --primary: #0f766e;
+      --primary-strong: #155e75;
+      --border: rgba(111, 138, 131, 0.18);
+      --shadow: 0 24px 64px rgba(54, 74, 67, 0.14);
+      --danger: #c2483d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      font-family: "MiSans", "HarmonyOS Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 24%),
+        radial-gradient(circle at right top, rgba(245, 158, 11, 0.2), transparent 20%),
+        linear-gradient(180deg, #fbf8f2, var(--bg));
+    }
+
+    .shell {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .panel,
+    .form-card {
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel {
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.16), transparent 30%),
+        linear-gradient(145deg, rgba(255,255,255,0.94), rgba(238,247,242,0.8));
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    h1 {
+      margin: 18px 0 14px;
+      font-size: 42px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .lead,
+    .meta {
+      color: var(--muted);
+      line-height: 1.85;
+      font-size: 15px;
+    }
+
+    .feature-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .feature {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid var(--border);
+    }
+
+    .feature strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 6px;
+      background: rgba(255,255,255,0.68);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      border: 0;
+      border-radius: 16px;
+      padding: 12px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      background: linear-gradient(180deg, #ffffff, #eff8f5);
+      box-shadow: 0 10px 24px rgba(15, 118, 110, 0.1);
+    }
+
+    .title {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .desc {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.9);
+      border-radius: 16px;
+      padding: 14px 15px;
+      font: inherit;
+      color: var(--text);
+      outline: none;
+    }
+
+    .input:focus {
+      border-color: rgba(15, 118, 110, 0.4);
+      box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+    }
+
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font: inherit;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
+      cursor: pointer;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .error,
+    .success {
+      min-height: 22px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .error { color: var(--danger); }
+    .success { color: var(--primary); }
+    .hidden { display: none !important; }
+
+    @media (max-width: 860px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="panel">
+      <div>
+        <div class="eyebrow">云端同步 · 登录保护 · 多设备可用</div>
+        <h1>先登录，再开始你的单词复习。</h1>
+        <div class="lead">
+          这个版本会把你的学习进度绑定到账号，并优先保存到云端数据库。
+          登录后，无论你在电脑还是服务器环境中访问，都能继续上次的复习状态。
+        </div>
+      </div>
+
+      <div class="feature-list">
+        <div class="feature">
+          <strong>账号隔离</strong>
+          <div class="meta">每个用户独立保存自己的单词、复习计划和设置。</div>
+        </div>
+        <div class="feature">
+          <strong>云端优先</strong>
+          <div class="meta">接入 PostgreSQL 后可直接部署到云服务器，避免只存在浏览器本地。</div>
+        </div>
+        <div class="feature">
+          <strong>本地兜底</strong>
+          <div class="meta">服务器暂时不可用时，前端仍会继续做本地备份，降低数据丢失风险。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-card">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="login">登录</button>
+        <button class="tab-btn" data-tab="register">注册</button>
+      </div>
+
+      <div id="panel-login">
+        <h2 class="title">欢迎回来</h2>
+        <p class="desc">输入你的账号和密码，进入单词记忆与复习系统。</p>
+        <form id="form-login">
+          <div class="field">
+            <label for="login-username">用户名</label>
+            <input id="login-username" class="input" autocomplete="username" placeholder="例如：alice_01" />
+          </div>
+          <div class="field">
+            <label for="login-password">密码</label>
+            <input id="login-password" class="input" type="password" autocomplete="current-password" placeholder="至少 8 位" />
+          </div>
+          <button class="btn" id="btn-login" type="submit">登录并进入</button>
+          <div class="error" id="login-error"></div>
+        </form>
+      </div>
+
+      <div id="panel-register" class="hidden">
+        <h2 class="title">创建账号</h2>
+        <p class="desc">注册后，你的数据会按账号隔离保存，并可部署到云端数据库中。</p>
+        <form id="form-register">
+          <div class="field">
+            <label for="register-username">用户名</label>
+            <input id="register-username" class="input" autocomplete="username" placeholder="3-32 位：字母、数字、_ 或 -" />
+          </div>
+          <div class="field">
+            <label for="register-password">密码</label>
+            <input id="register-password" class="input" type="password" autocomplete="new-password" placeholder="至少 8 位" />
+          </div>
+          <button class="btn" id="btn-register" type="submit">注册并进入</button>
+          <div class="error" id="register-error"></div>
+          <div class="success" id="register-success"></div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const TOKEN_KEY = "word_review_auth_token";
+
+    function setTab(tab) {
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tab);
+      });
+      document.getElementById("panel-login").classList.toggle("hidden", tab !== "login");
+      document.getElementById("panel-register").classList.toggle("hidden", tab !== "register");
+    }
+
+    function setToken(token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
+
+    function getToken() {
+      return localStorage.getItem(TOKEN_KEY) || "";
+    }
+
+    async function apiRequest(url, options = {}) {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {}),
+        },
+        ...options,
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `request_failed_${response.status}`);
+      }
+      return data;
+    }
+
+    async function ensureLoggedIn() {
+      const token = getToken();
+      if (!token) return;
+
+      try {
+        await apiRequest("/api/auth/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        window.location.href = "/app";
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+    }
+
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setTab(btn.dataset.tab));
+    });
+
+    document.getElementById("form-login").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const errorEl = document.getElementById("login-error");
+      errorEl.textContent = "";
+
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value;
+
+      try {
+        const result = await apiRequest("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ username, password }),
+        });
+        setToken(result.token);
+        window.location.href = "/app";
+      } catch (error) {
+        errorEl.textContent = error.message;
+      }
+    });
+
+    document.getElementById("form-register").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const errorEl = document.getElementById("register-error");
+      const successEl = document.getElementById("register-success");
+      errorEl.textContent = "";
+      successEl.textContent = "";
+
+      const username = document.getElementById("register-username").value.trim();
+      const password = document.getElementById("register-password").value;
+
+      try {
+        const result = await apiRequest("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify({ username, password }),
+        });
+        setToken(result.token);
+        successEl.textContent = "注册成功，正在进入学习页面。";
+        window.location.href = "/app";
+      } catch (error) {
+        errorEl.textContent = error.message;
+      }
+    });
+
+    ensureLoggedIn();
+  </script>
+</body>
+</html>

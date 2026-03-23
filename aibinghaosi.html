@@ -237,7 +237,7 @@
 
     .tabs {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       background: rgba(255,255,255,0.62);
       backdrop-filter: blur(16px);
@@ -942,7 +942,7 @@
     @media (max-width: 720px) {
       .container { padding: 16px 14px 28px; }
       .title { font-size: 24px; }
-      .tabs { grid-template-columns: 1fr 1fr; }
+      .tabs { grid-template-columns: 1fr 1fr 1fr; }
       .due-card { flex-direction: column; }
       .due-side { flex: 1 1 auto; }
       .all-top { align-items: stretch; }
@@ -1023,7 +1023,6 @@
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="today">今日复习</button>
-      <button class="tab-btn" data-tab="session">专注复习</button>
       <button class="tab-btn" data-tab="add">新增单词</button>
       <button class="tab-btn" data-tab="all">全部单词</button>
     </div>
@@ -1111,7 +1110,10 @@
     const STORAGE_KEY = "ebbinghaus_words_local_v1";
     const SETTINGS_KEY = "ebbinghaus_settings_v1";
     const AUTH_TOKEN_KEY = "word_review_auth_token";
+    const INITIAL_TAB_KEY = "word_review_initial_tab";
     const LOGIN_PAGE_URL = "/";
+    const APP_PAGE_URL = "/app";
+    const REVIEW_PAGE_URL = "/app/review";
     const AUTH_ME_URL = "/api/auth/me";
     const API_STATE_URL = "/api/state";
     const DICTIONARY_API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en/";
@@ -1202,6 +1204,31 @@
 
     function redirectToLogin() {
       window.location.href = LOGIN_PAGE_URL;
+    }
+
+    function isReviewRoute() {
+      return window.location.pathname.replace(/\/+$/, "") === REVIEW_PAGE_URL;
+    }
+
+    function navigateToAppHome() {
+      window.location.href = APP_PAGE_URL;
+    }
+
+    function navigateToReviewPage() {
+      window.location.href = REVIEW_PAGE_URL;
+    }
+
+    function navigateToAppTab(tab) {
+      sessionStorage.setItem(INITIAL_TAB_KEY, tab);
+      navigateToAppHome();
+    }
+
+    function consumeInitialTab() {
+      const tab = sessionStorage.getItem(INITIAL_TAB_KEY);
+      if (tab) {
+        sessionStorage.removeItem(INITIAL_TAB_KEY);
+      }
+      return tab;
     }
 
     async function apiRequest(url, options = {}) {
@@ -1579,6 +1606,10 @@
     }
 
     function startReviewSession(reset = true) {
+      if (!isReviewRoute()) {
+        navigateToReviewPage();
+        return;
+      }
       if (reset || !state.reviewSession.queue.length) {
         state.reviewSession.queue = buildReviewSessionQueue();
       }
@@ -2183,8 +2214,8 @@
     function bindEvents() {
       document.querySelectorAll(".tab-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
-          if (btn.dataset.tab === "session" && !state.reviewSession.queue.length) {
-            startReviewSession(true);
+          if (isReviewRoute()) {
+            navigateToAppTab(btn.dataset.tab);
             return;
           }
           setTab(btn.dataset.tab);
@@ -2200,7 +2231,7 @@
           return;
         }
         if (target.id === "btn-session-back" || target.id === "btn-session-exit") {
-          setTab("today");
+          navigateToAppTab("today");
           return;
         }
         if (target.id === "btn-session-reveal") {
@@ -2289,6 +2320,16 @@
       if (!loggedIn) return;
       await loadState();
       if (!state.currentUser) return;
+      const initialTab = consumeInitialTab();
+      if (isReviewRoute()) {
+        state.currentTab = "session";
+        state.reviewSession.queue = buildReviewSessionQueue();
+        state.reviewSession.revealed = false;
+      } else if (initialTab && ["today", "add", "all"].includes(initialTab)) {
+        state.currentTab = initialTab;
+      } else if (state.currentTab === "session") {
+        state.currentTab = "today";
+      }
       bindEvents();
       render();
       setInterval(() => {

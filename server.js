@@ -337,6 +337,10 @@ async function main() {
     res.sendFile(path.join(__dirname, "aibinghaosi.html"));
   });
 
+  app.get("/app/review", (_req, res) => {
+    res.sendFile(path.join(__dirname, "aibinghaosi.html"));
+  });
+
   app.get("/aibinghaosi.html", (_req, res) => {
     res.redirect("/app");
   });

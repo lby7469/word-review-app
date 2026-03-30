@@ -926,6 +926,47 @@
       line-height: 1.8;
     }
 
+    .calendar-entry-btn {
+      width: 100%;
+      margin-top: 14px;
+      border: 1px solid rgba(111, 138, 131, 0.16);
+      border-radius: 22px;
+      padding: 16px 18px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(238,247,242,0.8));
+      text-align: left;
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .calendar-entry-kicker {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #0f766e;
+      margin-bottom: 8px;
+    }
+
+    .calendar-entry-title {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 6px;
+    }
+
+    .calendar-entry-desc {
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    .calendar-shell {
+      display: grid;
+      gap: 18px;
+    }
+
     .focus-entry {
       display: flex;
       align-items: center;
@@ -1163,39 +1204,11 @@
           <button class="btn btn-outline" id="btn-logout" type="button">退出登录</button>
         </div>
 
-        <div class="checkin-box">
-          <div class="row-between">
-            <div>
-              <div class="account-label">每日签到</div>
-              <div class="checkin-status" id="checkin-status">今日未签到</div>
-            </div>
-            <button class="btn" id="btn-checkin" type="button">今日签到</button>
-          </div>
-
-          <div class="checkin-grid">
-            <div class="checkin-metric">
-              <div class="account-label">连续签到</div>
-              <div class="account-value" id="checkin-streak">0 天</div>
-            </div>
-            <div class="checkin-metric">
-              <div class="account-label">累计签到</div>
-              <div class="account-value" id="checkin-total">0 天</div>
-            </div>
-          </div>
-
-          <div class="checkin-calendar">
-            <div class="checkin-calendar-top">
-              <div class="checkin-calendar-title" id="checkin-calendar-title">签到日历</div>
-              <div class="calendar-nav">
-                <button class="icon-btn" id="btn-checkin-prev" type="button" title="上个月">←</button>
-                <button class="icon-btn" id="btn-checkin-today" type="button" title="回到本月">今</button>
-                <button class="icon-btn" id="btn-checkin-next" type="button" title="下个月">→</button>
-              </div>
-            </div>
-            <div class="checkin-weekdays" id="checkin-weekdays"></div>
-            <div class="checkin-calendar-grid" id="checkin-calendar-grid"></div>
-          </div>
-        </div>
+        <button class="calendar-entry-btn" id="btn-open-calendar" type="button">
+          <div class="calendar-entry-kicker">Calendar</div>
+          <div class="calendar-entry-title" id="calendar-entry-title">今日待签到</div>
+          <div class="calendar-entry-desc" id="calendar-entry-desc">点击进入日历界面，查看日期并完成签到。</div>
+        </button>
       </div>
     </div>
 
@@ -1218,6 +1231,57 @@
 
     <div id="tab-session" class="tab-shell hidden">
       <div id="session-panel" class="session-wrap"></div>
+    </div>
+
+    <div id="tab-calendar" class="tab-shell hidden">
+      <div class="calendar-shell">
+        <div class="card surface-panel">
+          <div class="row-between" style="margin-bottom: 16px;">
+            <div>
+              <div class="focus-kicker">Calendar Check-In</div>
+              <h2 class="section-title" style="margin-bottom:8px;">日期与签到</h2>
+              <div class="desc">在这里查看整月签到情况，也可以直接完成今天的签到。</div>
+            </div>
+            <div class="focus-actions">
+              <button class="btn" id="btn-checkin" type="button">今日签到</button>
+              <button class="btn btn-outline" id="btn-calendar-back" type="button">返回主页</button>
+            </div>
+          </div>
+
+          <div class="checkin-box" style="margin-top:0;">
+            <div class="row-between">
+              <div>
+                <div class="account-label">签到状态</div>
+                <div class="checkin-status" id="checkin-status">今日未签到</div>
+              </div>
+            </div>
+
+            <div class="checkin-grid">
+              <div class="checkin-metric">
+                <div class="account-label">连续签到</div>
+                <div class="account-value" id="checkin-streak">0 天</div>
+              </div>
+              <div class="checkin-metric">
+                <div class="account-label">累计签到</div>
+                <div class="account-value" id="checkin-total">0 天</div>
+              </div>
+            </div>
+
+            <div class="checkin-calendar">
+              <div class="checkin-calendar-top">
+                <div class="checkin-calendar-title" id="checkin-calendar-title">签到日历</div>
+                <div class="calendar-nav">
+                  <button class="icon-btn" id="btn-checkin-prev" type="button" title="上个月">←</button>
+                  <button class="icon-btn" id="btn-checkin-today" type="button" title="回到本月">今</button>
+                  <button class="icon-btn" id="btn-checkin-next" type="button" title="下个月">→</button>
+                </div>
+              </div>
+              <div class="checkin-weekdays" id="checkin-weekdays"></div>
+              <div class="checkin-calendar-grid" id="checkin-calendar-grid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="tab-add" class="tab-shell hidden">
@@ -1369,6 +1433,17 @@
 
     function isDateString(value) {
       return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+    }
+
+    function normalizeDailyReview(raw) {
+      const date = isDateString(raw?.date) ? raw.date : "";
+      const remainingShows = Number.isInteger(raw?.remainingShows) && raw.remainingShows > 0 ? raw.remainingShows : 0;
+      const totalShows = Number.isInteger(raw?.totalShows) && raw.totalShows >= remainingShows ? raw.totalShows : remainingShows;
+      return {
+        date,
+        remainingShows,
+        totalShows,
+      };
     }
 
     function diffDays(fromDate, toDate) {
@@ -1690,6 +1765,7 @@
         intervals: Array.isArray(raw.intervals) && raw.intervals.length ? raw.intervals : DEFAULT_INTERVALS,
         completedReviews: Array.isArray(raw.completedReviews) ? raw.completedReviews : [],
         reinforcementRounds,
+        dailyReview: normalizeDailyReview(raw.dailyReview),
         lapseCount: typeof raw.lapseCount === "number" ? raw.lapseCount : reinforcementRounds.length,
       };
     }
@@ -1720,6 +1796,11 @@
       });
       console.assert(getAllDueSteps(reinforced, "2026-03-23").length === 3, "reinforcement due steps should be included");
       console.assert(getNextPendingStep(reinforced, "2026-03-23")?.source === "main", "main plan should be prioritized on same day");
+      console.assert(getDailyReviewState(sample, "2026-03-22")?.remainingShows === 2, "daily review should default to two shows");
+      console.assert(
+        normalizeDailyReview({ date: "2026-03-30", remainingShows: 4, totalShows: 5 }).remainingShows === 4,
+        "daily review normalization should keep valid counters"
+      );
       console.assert(trimMeaningText("v.私下和解 ,复合 ,私了") === "私下和解 / 复合", "meaning trimming should keep concise translations");
       console.assert(
         normalizeActivity({ checkinDates: ["2026-03-30", "2026-03-30", "bad"] }).checkinDates.length === 1,
@@ -1862,8 +1943,8 @@
 
     function getStats() {
       const today = todayDate();
-      const dueWords = state.words.filter((word) => getDueReviewUnits(word, today).length > 0);
-      const totalDueSteps = state.words.reduce((sum, word) => sum + getDueReviewUnits(word, today).length, 0);
+      const dueWords = state.words.filter((word) => getDailyReviewState(word, today)?.remainingShows > 0);
+      const totalDueSteps = state.words.reduce((sum, word) => sum + (getDailyReviewState(word, today)?.remainingShows || 0), 0);
       const todayLearned = state.words.filter((word) => word.learnedDate === today).length;
 
       return {
@@ -1877,12 +1958,17 @@
     function getDueToday() {
       const today = todayDate();
       return state.words
-        .map((word) => ({
-          ...word,
-          dueUnits: getDueReviewUnits(word, today),
-          nextPending: getNextPendingUnit(word, today),
-        }))
-        .filter((word) => word.dueUnits.length > 0)
+        .map((word) => {
+          const dueUnits = getDueReviewUnits(word, today);
+          const dailyTask = getDailyReviewState(word, today, dueUnits);
+          return {
+            ...word,
+            dueUnits,
+            nextPending: getNextPendingUnit(word, today),
+            dailyTask,
+          };
+        })
+        .filter((word) => word.dailyTask?.remainingShows > 0)
         .sort((a, b) => {
           const aDate = a.nextPending?.reviewDate || today;
           const bDate = b.nextPending?.reviewDate || today;
@@ -1904,10 +1990,12 @@
       const word = getWordById(wordId);
       if (!word) return null;
       const today = todayDate();
+      const dueUnits = getDueReviewUnits(word, today);
       return {
         ...word,
-        dueUnits: getDueReviewUnits(word, today),
+        dueUnits,
         nextPending: getNextPendingUnit(word, today),
+        dailyTask: getDailyReviewState(word, today, dueUnits),
       };
     }
 
@@ -1915,7 +2003,7 @@
       const nextQueue = [];
       for (const wordId of state.reviewSession.queue) {
         const item = getEnrichedWord(wordId);
-        if (item && item.dueUnits.length > 0) {
+        if (item && item.dailyTask?.remainingShows > 0) {
           nextQueue.push(wordId);
         }
       }
@@ -1951,7 +2039,7 @@
       }
 
       const updated = getEnrichedWord(wordId);
-      if (updated && updated.dueUnits.length > 0) {
+      if (updated && updated.dailyTask?.remainingShows > 0) {
         state.reviewSession.queue.push(wordId);
       }
       state.reviewSession.revealed = false;
@@ -1968,7 +2056,9 @@
         return [...result].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       }
       if (state.sortBy === "due") {
-        return [...result].sort((a, b) => getDueReviewUnits(b, today).length - getDueReviewUnits(a, today).length);
+        return [...result].sort(
+          (a, b) => (getDailyReviewState(b, today)?.remainingShows || 0) - (getDailyReviewState(a, today)?.remainingShows || 0)
+        );
       }
       return result;
     }
@@ -1992,6 +2082,22 @@
 
     function getDueReviewUnits(word, today) {
       return groupStepsByReviewDate(getAllDueSteps(word, today));
+    }
+
+    function getDailyReviewState(word, today, dueUnits = null) {
+      const units = dueUnits || getDueReviewUnits(word, today);
+      if (!units.length) return null;
+
+      const stored = normalizeDailyReview(word.dailyReview);
+      if (stored.date === today && stored.remainingShows > 0) {
+        return stored;
+      }
+
+      return {
+        date: today,
+        remainingShows: 2,
+        totalShows: 2,
+      };
     }
 
     function getNextPendingUnit(word, today) {
@@ -2052,81 +2158,18 @@
       });
     }
 
-    function markReviewDone(wordId, step, source = "main", reinforcementId) {
-      applyReviewDone(wordId, step, source, reinforcementId);
-      void persist();
-      render();
-    }
-
-    function markWordKnown(wordId) {
-      const target = state.words.find((word) => word.id === wordId);
-      if (!target) return;
-      const next = getNextPendingUnit(target, todayDate());
-      if (!next) return;
-      applyReviewItemsDone(wordId, next.items);
-      void persist();
-      render();
-    }
-
-    function applyWordUnknown(wordId) {
-      const today = todayDate();
+    function setWordDailyReview(wordId, dailyReviewUpdater) {
       state.words = state.words.map((word) => {
         if (word.id !== wordId) return word;
+        const nextDailyReview = typeof dailyReviewUpdater === "function" ? dailyReviewUpdater(word) : dailyReviewUpdater;
         return {
           ...word,
-          learnedDate: today,
-          intervals: state.settings.intervals.slice(),
-          completedReviews: [],
-          reinforcementRounds: [],
-          lapseCount: (word.lapseCount || 0) + 1,
+          dailyReview: normalizeDailyReview(nextDailyReview),
         };
       });
     }
 
-    function markWordUnknown(wordId) {
-      applyWordUnknown(wordId);
-      void persist();
-      render();
-    }
-
-    function revealSessionMeaning() {
-      const current = getCurrentSessionWord();
-      if (!current) return;
-      state.reviewSession.revealed = true;
-      render();
-    }
-
-    function answerSessionKnown() {
-      const current = getCurrentSessionWord();
-      if (!current || !current.nextPending) return;
-      applyReviewItemsDone(current.id, current.nextPending.items);
-      finishReviewTurn(current.id);
-      void persist();
-      render();
-    }
-
-    function markDueUnitDone(wordId, reviewDate) {
-      const target = getWordById(wordId);
-      if (!target) return;
-      const unit = getDueReviewUnits(target, todayDate()).find((item) => item.reviewDate === reviewDate);
-      if (!unit) return;
-      applyReviewItemsDone(wordId, unit.items);
-      void persist();
-      render();
-    }
-
-    function answerSessionUnknown() {
-      const current = getCurrentSessionWord();
-      if (!current) return;
-      applyWordUnknown(current.id);
-      finishReviewTurn(current.id);
-      void persist();
-      render();
-    }
-
-    function markAllDueDone(wordId) {
-      const today = todayDate();
-
+    function applyAllDueDone(wordId, today = todayDate()) {
       state.words = state.words.map((word) => {
         if (word.id !== wordId) return word;
 
@@ -2150,9 +2193,106 @@
             ...round,
             completedSteps: Array.from(reinforcementMap.get(round.id) || []).sort((a, b) => a - b),
           })),
+          dailyReview: normalizeDailyReview({ date: today, remainingShows: 0, totalShows: 0 }),
         };
       });
+    }
 
+    function markReviewDone(wordId, step, source = "main", reinforcementId) {
+      applyReviewDone(wordId, step, source, reinforcementId);
+      void persist();
+      render();
+    }
+
+    function applyWordDailyAnswer(wordId, isKnown) {
+      const target = getWordById(wordId);
+      const today = todayDate();
+      if (!target) return;
+
+      const dailyTask = getDailyReviewState(target, today);
+      if (!dailyTask) return;
+
+      if (isKnown) {
+        const nextRemaining = dailyTask.remainingShows - 1;
+        if (nextRemaining <= 0) {
+          applyAllDueDone(wordId, today);
+          return;
+        }
+        setWordDailyReview(wordId, {
+          date: today,
+          remainingShows: nextRemaining,
+          totalShows: dailyTask.totalShows,
+        });
+        return;
+      }
+
+      state.words = state.words.map((word) => {
+        if (word.id !== wordId) return word;
+        return {
+          ...word,
+          lapseCount: (word.lapseCount || 0) + 1,
+          dailyReview: normalizeDailyReview({
+            date: today,
+            remainingShows: dailyTask.remainingShows + 2,
+            totalShows: dailyTask.totalShows + 3,
+          }),
+        };
+      });
+    }
+
+    function markWordKnown(wordId) {
+      applyWordDailyAnswer(wordId, true);
+      void persist();
+      render();
+    }
+
+    function markWordUnknown(wordId) {
+      applyWordDailyAnswer(wordId, false);
+      void persist();
+      render();
+    }
+
+    function revealSessionMeaning() {
+      const current = getCurrentSessionWord();
+      if (!current) return;
+      state.reviewSession.revealed = true;
+      render();
+    }
+
+    function answerSessionKnown() {
+      const current = getCurrentSessionWord();
+      if (!current) return;
+      applyWordDailyAnswer(current.id, true);
+      finishReviewTurn(current.id);
+      void persist();
+      render();
+    }
+
+    function markDueUnitDone(wordId, reviewDate) {
+      const target = getWordById(wordId);
+      if (!target) return;
+      const unit = getDueReviewUnits(target, todayDate()).find((item) => item.reviewDate === reviewDate);
+      if (!unit) return;
+      applyReviewItemsDone(wordId, unit.items);
+      const updated = getWordById(wordId);
+      if (updated && getDueReviewUnits(updated, todayDate()).length === 0) {
+        setWordDailyReview(wordId, normalizeDailyReview());
+      }
+      void persist();
+      render();
+    }
+
+    function answerSessionUnknown() {
+      const current = getCurrentSessionWord();
+      if (!current) return;
+      applyWordDailyAnswer(current.id, false);
+      finishReviewTurn(current.id);
+      void persist();
+      render();
+    }
+
+    function markAllDueDone(wordId) {
+      applyAllDueDone(wordId);
       void persist();
       render();
     }
@@ -2160,7 +2300,7 @@
     function resetProgress(wordId) {
       state.words = state.words.map((word) =>
         word.id === wordId
-          ? { ...word, completedReviews: [], reinforcementRounds: [], lapseCount: 0 }
+          ? { ...word, completedReviews: [], reinforcementRounds: [], dailyReview: normalizeDailyReview(), lapseCount: 0 }
           : word
       );
       void persist();
@@ -2295,6 +2435,7 @@
       });
       document.getElementById("tab-today").classList.toggle("hidden", tab !== "today");
       document.getElementById("tab-session").classList.toggle("hidden", tab !== "session");
+      document.getElementById("tab-calendar").classList.toggle("hidden", tab !== "calendar");
       document.getElementById("tab-add").classList.toggle("hidden", tab !== "add");
       document.getElementById("tab-all").classList.toggle("hidden", tab !== "all");
     }
@@ -2358,6 +2499,7 @@
     function renderTop() {
       const now = getBeijingNow();
       const stats = getStats();
+      const checkinStats = getCheckinStats();
 
       document.getElementById("beijing-time").textContent = "北京时间：" + formatDateTimeCN(now);
       document.getElementById("today-record-date").textContent = `记录日期：${todayDate()}（自动按北京时间获取）`;
@@ -2377,6 +2519,10 @@
       document.getElementById("stat-today-learned").textContent = String(stats.todayLearned);
       document.getElementById("stat-due-words").textContent = String(stats.dueWords);
       document.getElementById("stat-due-steps").textContent = String(stats.totalDueSteps);
+      document.getElementById("calendar-entry-title").textContent =
+        `${todayDate()} · ${checkinStats.checkedInToday ? "今日已签到" : "今日待签到"}`;
+      document.getElementById("calendar-entry-desc").textContent =
+        `连续签到 ${checkinStats.streak} 天，累计签到 ${checkinStats.total} 天。点击进入日历界面。`;
       renderCheckinPanel();
     }
 
@@ -2393,7 +2539,7 @@
             <div class="focus-kicker">Focus Review</div>
             <h2 class="section-title" style="margin-bottom:8px;">逐词复习模式</h2>
             <div class="desc">
-              每次只看一个单词。点击“认识”后，如果这个单词今天还有未完成的复习次数，它会自动回到队列末尾；如果点“不认识”，这个单词会从今天开始重新按七轮计划计数。
+              每个需要复习的单词今天默认展示 2 次。第一次点“认识”会回到队尾，第二次再点“认识”才算今天完成；如果任意一次点“不认识”，这个单词今天还需要额外再展示 3 次。
             </div>
           </div>
           <div class="focus-actions">
@@ -2424,15 +2570,12 @@
         const revealed = !!state.revealState[word.id];
         const nextPending = getNextPendingStep(word, todayDate());
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
+        const remainingShows = word.dailyTask?.remainingShows || 0;
 
         const dueStepsHtml = word.dueUnits
           .map((unit) => `
             <div class="pill">
               ${escapeHtml(unit.label)}（应复习日期：${escapeHtml(unit.reviewDate)}）
-              <button class="btn btn-outline due-step-btn"
-                onclick="window.__app.markDueUnitDone('${word.id}', '${unit.reviewDate}')">
-                直接标完成
-              </button>
             </div>
           `)
           .join("");
@@ -2471,6 +2614,7 @@
 
               <div class="muted">学习日期：${escapeHtml(word.learnedDate)}</div>
               ${nextPending ? `<div class="muted" style="margin-top:6px;">当前优先复习：${escapeHtml(nextPending.label)}（${escapeHtml(nextPending.reviewDate)}）</div>` : ""}
+              <div class="muted" style="margin-top:6px;">今天还需展示：${remainingShows} 次</div>
               <div class="pill-list" style="margin-top:12px;">${dueStepsHtml}</div>
             </div>
 
@@ -2504,7 +2648,7 @@
         return;
       }
 
-      const remainingSteps = current.dueUnits.length;
+      const remainingShows = current.dailyTask?.remainingShows || 0;
       const lapseMeta = getLapseMeta(current.lapseCount || 0);
       panelEl.innerHTML = `
         <div class="card session-card">
@@ -2513,7 +2657,7 @@
               <div>
                 <div class="focus-kicker">Daily Session</div>
                 <h2 class="section-title" style="margin-bottom:8px;">专注复习</h2>
-                <div class="session-progress">当前队列还有 ${totalWords} 个单词待过一遍，${escapeHtml(current.word)} 今天还剩 ${remainingSteps} 次待处理。</div>
+                <div class="session-progress">当前队列还有 ${totalWords} 个单词待过一遍，${escapeHtml(current.word)} 今天还剩 ${remainingShows} 次待展示。</div>
               </div>
               <div class="focus-actions">
                 <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
@@ -2534,7 +2678,7 @@
                   : `
                     <div class="session-meaning">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
                     ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
-                    <div class="session-tip">点“认识”会完成当前应复习轮次；点“不认识”会把这个单词从今天开始重置为新的七轮复习计划。</div>
+                    <div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>
                     <div class="session-actions">
                       <button class="btn" id="btn-session-known">认识</button>
                       <button class="btn btn-danger" id="btn-session-unknown">不认识</button>
@@ -2547,7 +2691,7 @@
           <div class="session-footer">
               <div class="session-meta">
                 当前优先复习：${escapeHtml(current.nextPending?.label || "已完成")}<br />
-              今日待复习轮次：${escapeHtml(current.dueUnits.map((unit) => unit.label).join("、"))}
+              今日关联计划：${escapeHtml(current.dueUnits.map((unit) => unit.label).join("、"))}
             </div>
             <div class="focus-actions">
               <button class="btn btn-outline" id="btn-session-rescan">重新生成队列</button>
@@ -2700,7 +2844,15 @@
       });
       document.getElementById("btn-export").addEventListener("click", exportData);
       document.getElementById("btn-settings").addEventListener("click", applyIntervalsByPrompt);
+      document.getElementById("btn-open-calendar").addEventListener("click", () => {
+        state.checkinCalendarOffset = 0;
+        setTab("calendar");
+        renderCheckinPanel();
+      });
       document.getElementById("btn-checkin").addEventListener("click", checkInToday);
+      document.getElementById("btn-calendar-back").addEventListener("click", () => {
+        setTab("today");
+      });
       document.getElementById("btn-checkin-prev").addEventListener("click", () => {
         state.checkinCalendarOffset -= 1;
         renderCheckinPanel();
@@ -2798,7 +2950,7 @@
         state.currentTab = "session";
         state.reviewSession.queue = buildReviewSessionQueue();
         state.reviewSession.revealed = false;
-      } else if (initialTab && ["today", "add", "all"].includes(initialTab)) {
+      } else if (initialTab && ["today", "calendar", "add", "all"].includes(initialTab)) {
         state.currentTab = initialTab;
       } else if (state.currentTab === "session") {
         state.currentTab = "today";

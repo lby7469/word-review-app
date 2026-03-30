@@ -799,6 +799,133 @@
       letter-spacing: -0.02em;
     }
 
+    .checkin-box {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(111, 138, 131, 0.16);
+      display: grid;
+      gap: 14px;
+    }
+
+    .checkin-status {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .checkin-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .checkin-metric {
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fbfdfc, #edf5f1);
+      border: 1px solid rgba(111, 138, 131, 0.14);
+      padding: 12px 14px;
+    }
+
+    .checkin-calendar {
+      display: grid;
+      gap: 10px;
+    }
+
+    .checkin-calendar-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .checkin-calendar-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .calendar-nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .calendar-nav .icon-btn {
+      min-width: 42px;
+      text-align: center;
+    }
+
+    .checkin-weekdays,
+    .checkin-calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .checkin-weekday {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      padding: 2px 0;
+    }
+
+    .checkin-day {
+      border-radius: 14px;
+      min-height: 72px;
+      padding: 10px 8px;
+      text-align: center;
+      border: 1px solid rgba(111, 138, 131, 0.14);
+      background: rgba(255,255,255,0.84);
+      display: grid;
+      align-content: center;
+      gap: 4px;
+    }
+
+    .checkin-day strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .checkin-day span {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .checkin-day.on {
+      background: linear-gradient(180deg, #e7f7f2, #dff2ec);
+      color: #0f766e;
+      border-color: rgba(15, 118, 110, 0.18);
+    }
+
+    .checkin-day.off {
+      background: rgba(255,255,255,0.7);
+    }
+
+    .checkin-day.today {
+      box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.26);
+    }
+
+    .checkin-day.other-month {
+      opacity: 0.4;
+    }
+
+    .review-backlog {
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, #fff8eb, #fff0d8);
+      border: 1px solid rgba(245, 158, 11, 0.14);
+      color: var(--warn-text);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
     .focus-entry {
       display: flex;
       align-items: center;
@@ -1035,6 +1162,40 @@
           </div>
           <button class="btn btn-outline" id="btn-logout" type="button">退出登录</button>
         </div>
+
+        <div class="checkin-box">
+          <div class="row-between">
+            <div>
+              <div class="account-label">每日签到</div>
+              <div class="checkin-status" id="checkin-status">今日未签到</div>
+            </div>
+            <button class="btn" id="btn-checkin" type="button">今日签到</button>
+          </div>
+
+          <div class="checkin-grid">
+            <div class="checkin-metric">
+              <div class="account-label">连续签到</div>
+              <div class="account-value" id="checkin-streak">0 天</div>
+            </div>
+            <div class="checkin-metric">
+              <div class="account-label">累计签到</div>
+              <div class="account-value" id="checkin-total">0 天</div>
+            </div>
+          </div>
+
+          <div class="checkin-calendar">
+            <div class="checkin-calendar-top">
+              <div class="checkin-calendar-title" id="checkin-calendar-title">签到日历</div>
+              <div class="calendar-nav">
+                <button class="icon-btn" id="btn-checkin-prev" type="button" title="上个月">←</button>
+                <button class="icon-btn" id="btn-checkin-today" type="button" title="回到本月">今</button>
+                <button class="icon-btn" id="btn-checkin-next" type="button" title="下个月">→</button>
+              </div>
+            </div>
+            <div class="checkin-weekdays" id="checkin-weekdays"></div>
+            <div class="checkin-calendar-grid" id="checkin-calendar-grid"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1062,7 +1223,7 @@
     <div id="tab-add" class="tab-shell hidden">
       <div class="card surface-panel">
         <h2 class="section-title">记录今天新学的单词</h2>
-        <div class="desc" style="margin-bottom: 16px;">输入单词后可自动获取中文释义，保存后会自动生成整套复习计划</div>
+        <div class="desc" style="margin-bottom: 16px;">输入单词后会优先获取更短的中文词义；如果你想微调，也可以直接编辑后再保存</div>
 
         <div class="two-col">
           <div>
@@ -1072,10 +1233,10 @@
             </div>
 
             <div class="field">
-              <label for="input-meaning">自动中文释义</label>
+              <label for="input-meaning">自动中文释义（可编辑）</label>
               <div class="inline-group">
-                <input id="input-meaning" class="input" placeholder="输入单词后点击获取中文释义" readonly />
-                <button class="btn btn-outline" id="btn-lookup">获取中文释义</button>
+                <input id="input-meaning" class="input" placeholder="输入单词后点击获取更短的中文词义" />
+                <button class="btn btn-outline" id="btn-lookup">获取简短释义</button>
               </div>
               <div id="fetch-error" class="error hidden"></div>
             </div>
@@ -1126,6 +1287,7 @@
   <script>
     const STORAGE_KEY = "ebbinghaus_words_local_v1";
     const SETTINGS_KEY = "ebbinghaus_settings_v1";
+    const ACTIVITY_KEY = "ebbinghaus_activity_v1";
     const AUTH_TOKEN_KEY = "word_review_auth_token";
     const INITIAL_TAB_KEY = "word_review_initial_tab";
     const LOGIN_PAGE_URL = "/";
@@ -1133,14 +1295,16 @@
     const REVIEW_PAGE_URL = "/app/review";
     const AUTH_ME_URL = "/api/auth/me";
     const API_STATE_URL = "/api/state";
-    const DICTIONARY_API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en/";
-    const TRANSLATE_API_BASE = "https://api.mymemory.translated.net/get";
+    const LOOKUP_MEANING_URL = "/api/lookup/meaning";
     const DEFAULT_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
     const REINFORCEMENT_INTERVALS = [0, 1, 2];
+    const MAX_MEANING_LENGTH = 24;
+    const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
 
     const state = {
       words: [],
       settings: { intervals: DEFAULT_INTERVALS.slice() },
+      activity: { checkinDates: [], lastActiveDate: "" },
       currentTab: "today",
       query: "",
       sortBy: "newest",
@@ -1154,11 +1318,13 @@
         queue: [],
         revealed: false,
       },
+      checkinCalendarOffset: 0,
       form: {
         word: "",
         meaning: "",
         note: "",
       },
+      lastActiveSnapshot: "",
       revealState: {}
     };
 
@@ -1199,6 +1365,30 @@
 
     function isDueOnOrBefore(targetDate, today) {
       return targetDate <= today;
+    }
+
+    function isDateString(value) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+    }
+
+    function diffDays(fromDate, toDate) {
+      if (!isDateString(fromDate) || !isDateString(toDate)) return 0;
+      const [fromY, fromM, fromD] = fromDate.split("-").map(Number);
+      const [toY, toM, toD] = toDate.split("-").map(Number);
+      const fromUtc = Date.UTC(fromY, fromM - 1, fromD);
+      const toUtc = Date.UTC(toY, toM - 1, toD);
+      return Math.floor((toUtc - fromUtc) / 86400000);
+    }
+
+    function normalizeActivity(raw) {
+      const checkinDates = Array.isArray(raw?.checkinDates)
+        ? Array.from(new Set(raw.checkinDates.filter((item) => isDateString(item)))).sort()
+        : [];
+
+      return {
+        checkinDates,
+        lastActiveDate: isDateString(raw?.lastActiveDate) ? raw.lastActiveDate : "",
+      };
     }
 
     function safeRead(key, fallback) {
@@ -1296,6 +1486,7 @@
     function persistLocalBackup() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.words));
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+      localStorage.setItem(ACTIVITY_KEY, JSON.stringify(state.activity));
     }
 
     async function persist() {
@@ -1308,6 +1499,7 @@
           body: JSON.stringify({
             words: state.words,
             settings: state.settings,
+            activity: state.activity,
           }),
         });
         state.syncStatus = "已同步到云端";
@@ -1405,67 +1597,76 @@
         .some((value) => String(value).toLowerCase().includes(q));
     }
 
-    function extractMeaningFromDictionaryData(data) {
-      if (!Array.isArray(data) || data.length === 0) return "";
-
-      const lines = [];
-      for (const entry of data) {
-        for (const meaning of entry.meanings || []) {
-          const partOfSpeech = meaning.partOfSpeech ? `【${meaning.partOfSpeech}】` : "";
-          const definitions = (meaning.definitions || [])
-            .slice(0, 2)
-            .map((item) => item.definition)
-            .filter(Boolean);
-
-          if (definitions.length > 0) {
-            lines.push(`${partOfSpeech}${definitions.join("；")}`);
-          }
-        }
-      }
-
-      return lines.slice(0, 3).join(" / ");
+    function normalizeMeaningText(text) {
+      return String(text || "")
+        .replace(/&amp;/gi, "&")
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/\s*([,，;；/])\s*/g, "$1")
+        .trim();
     }
 
-    async function translateTextToChinese(text) {
-      const cleaned = text.trim();
-      if (!cleaned) return "";
+    function trimMeaningText(text, maxLength = MAX_MEANING_LENGTH) {
+      let value = normalizeMeaningText(text)
+        .replace(/^(n|v|adj|adv|prep|pron|vt|vi|aux|num)\.\s*/i, "")
+        .replace(/^[：:;；,，/\-]+/, "")
+        .trim();
 
-      const url =
-        TRANSLATE_API_BASE +
-        "?q=" +
-        encodeURIComponent(cleaned) +
-        "&langpair=" +
-        encodeURIComponent("en|zh-CN");
+      if (!value) return "";
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("中文释义翻译失败");
+      const primaryParts = value
+        .split(/[；;\/,，]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      if (primaryParts.length > 1) {
+        const joined = primaryParts.slice(0, 2).join(" / ");
+        if (joined.length <= maxLength) {
+          return joined;
+        }
+        value = primaryParts[0];
       }
 
-      const data = await response.json();
-      const translated = data?.responseData?.translatedText;
-      if (!translated || typeof translated !== "string") {
-        throw new Error("中文释义翻译失败");
+      value = value.split(/[。.!?！？]/)[0].trim();
+
+      if (value.length <= maxLength) {
+        return value;
       }
 
-      return translated.trim();
+      const shortClause = value
+        .split(/[，,（(]/)
+        .map((item) => item.trim())
+        .find(Boolean);
+
+      if (shortClause && shortClause.length < value.length) {
+        value = shortClause;
+      }
+
+      return value.length <= maxLength ? value : value.slice(0, maxLength).trim();
+    }
+
+    function isUsefulMeaning(meaning, word) {
+      const cleaned = trimMeaningText(meaning);
+      if (!cleaned) return false;
+      return cleaned.toLowerCase() !== String(word || "").trim().toLowerCase();
     }
 
     async function fetchMeaning(word) {
       const cleaned = word.trim();
       if (!cleaned) return "";
 
-      const response = await fetch(`${DICTIONARY_API_BASE}${encodeURIComponent(cleaned)}`);
-      if (!response.ok) {
-        throw new Error("释义获取失败");
-      }
+      const result = await apiRequest(LOOKUP_MEANING_URL, {
+        method: "POST",
+        body: JSON.stringify({ word: cleaned }),
+      });
 
-      const data = await response.json();
-      const englishMeaning = extractMeaningFromDictionaryData(data);
-      if (!englishMeaning) {
-        throw new Error("未查询到明确释义");
+      const meaning = trimMeaningText(result?.meaning || "");
+      if (isUsefulMeaning(meaning, cleaned)) {
+        return meaning;
       }
-      return await translateTextToChinese(englishMeaning);
+      throw new Error("未查询到简短释义");
     }
 
     function normalizeWord(raw) {
@@ -1519,6 +1720,11 @@
       });
       console.assert(getAllDueSteps(reinforced, "2026-03-23").length === 3, "reinforcement due steps should be included");
       console.assert(getNextPendingStep(reinforced, "2026-03-23")?.source === "main", "main plan should be prioritized on same day");
+      console.assert(trimMeaningText("v.私下和解 ,复合 ,私了") === "私下和解 / 复合", "meaning trimming should keep concise translations");
+      console.assert(
+        normalizeActivity({ checkinDates: ["2026-03-30", "2026-03-30", "bad"] }).checkinDates.length === 1,
+        "activity normalization should deduplicate valid dates"
+      );
     }
 
     async function loadState() {
@@ -1526,6 +1732,7 @@
         const remote = await apiRequest(API_STATE_URL);
         state.words = (remote.words || []).map(normalizeWord);
         const settings = remote.settings || { intervals: DEFAULT_INTERVALS };
+        state.activity = normalizeActivity(remote.activity);
         state.settings = {
           intervals:
             Array.isArray(settings.intervals) && settings.intervals.length
@@ -1543,6 +1750,7 @@
         }
         state.words = safeRead(STORAGE_KEY, []).map(normalizeWord);
         const settings = safeRead(SETTINGS_KEY, { intervals: DEFAULT_INTERVALS });
+        state.activity = normalizeActivity(safeRead(ACTIVITY_KEY, {}));
         state.settings = {
           intervals:
             Array.isArray(settings.intervals) && settings.intervals.length
@@ -1557,6 +1765,99 @@
 
     function todayDate() {
       return formatDateCN(getBeijingNow());
+    }
+
+    function getCheckinStats() {
+      const dates = normalizeActivity(state.activity).checkinDates;
+      const today = todayDate();
+      const checkedInToday = dates.includes(today);
+      const latestDate = dates[dates.length - 1] || "";
+
+      let streak = 0;
+      let cursor = latestDate;
+      while (cursor && dates.includes(cursor)) {
+        streak += 1;
+        cursor = addDays(cursor, -1);
+      }
+
+      return {
+        checkedInToday,
+        total: dates.length,
+        streak,
+        latestDate,
+      };
+    }
+
+    function getCalendarMonthDate(offset = 0) {
+      const now = getBeijingNow();
+      return new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    }
+
+    function formatCalendarTitle(date) {
+      return `${date.getFullYear()} 年 ${String(date.getMonth() + 1).padStart(2, "0")} 月`;
+    }
+
+    function getCalendarDays(offset = 0) {
+      const monthDate = getCalendarMonthDate(offset);
+      const year = monthDate.getFullYear();
+      const month = monthDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const weekdayOffset = (firstDay.getDay() + 6) % 7;
+      const calendarStart = new Date(year, month, 1 - weekdayOffset);
+
+      return Array.from({ length: 42 }, (_, index) => {
+        const current = new Date(calendarStart);
+        current.setDate(calendarStart.getDate() + index);
+        return {
+          date: formatDateCN(current),
+          day: current.getDate(),
+          inCurrentMonth: current.getMonth() === month,
+        };
+      });
+    }
+
+    function getBacklogSummary() {
+      const today = todayDate();
+      let missedWords = 0;
+      let missedUnits = 0;
+
+      for (const word of state.words) {
+        const units = groupStepsByReviewDate(getAllDueSteps(word, today).filter((item) => item.reviewDate < today));
+        if (units.length > 0) {
+          missedWords += 1;
+          missedUnits += units.length;
+        }
+      }
+
+      return {
+        missedWords,
+        missedUnits,
+        gapDays: state.lastActiveSnapshot ? Math.max(diffDays(state.lastActiveSnapshot, today), 0) : 0,
+      };
+    }
+
+    function touchLastActiveDate() {
+      const today = todayDate();
+      state.lastActiveSnapshot = state.activity.lastActiveDate || "";
+      if (state.activity.lastActiveDate === today) {
+        return;
+      }
+      state.activity.lastActiveDate = today;
+      void persist();
+    }
+
+    function checkInToday() {
+      const today = todayDate();
+      if (state.activity.checkinDates.includes(today)) {
+        renderTop();
+        return;
+      }
+      state.activity = normalizeActivity({
+        ...state.activity,
+        checkinDates: [...state.activity.checkinDates, today],
+      });
+      void persist();
+      renderTop();
     }
 
     function getStats() {
@@ -1582,7 +1883,13 @@
           nextPending: getNextPendingUnit(word, today),
         }))
         .filter((word) => word.dueUnits.length > 0)
-        .sort((a, b) => a.learnedDate.localeCompare(b.learnedDate));
+        .sort((a, b) => {
+          const aDate = a.nextPending?.reviewDate || today;
+          const bDate = b.nextPending?.reviewDate || today;
+          if (aDate !== bDate) return aDate.localeCompare(bDate);
+          if (a.learnedDate !== b.learnedDate) return a.learnedDate.localeCompare(b.learnedDate);
+          return a.createdAt.localeCompare(b.createdAt);
+        });
     }
 
     function buildReviewSessionQueue() {
@@ -1879,7 +2186,7 @@
         const meaning = await fetchMeaning(word);
         state.form.meaning = meaning || "未查询到中文释义";
       } catch {
-        state.fetchError = "自动获取中文释义失败，你仍然可以直接保存单词，并把中文释义写在备注里。";
+        state.fetchError = "自动获取简短释义失败，你仍然可以手动修改词义后再保存。";
       } finally {
         state.isFetchingMeaning = false;
         syncFormUI();
@@ -1899,7 +2206,7 @@
         try {
           finalMeaning = await fetchMeaning(cleanedWord);
         } catch {
-          state.fetchError = "自动获取中文释义失败，已保存单词；你之后可以在备注里补充中文释义。";
+          state.fetchError = "自动获取简短释义失败，已保存单词；你之后仍可以手动补充词义。";
         } finally {
           state.isFetchingMeaning = false;
           syncFormUI();
@@ -1930,6 +2237,7 @@
         exportedAt: new Date().toISOString(),
         beijingDate: todayDate(),
         settings: state.settings,
+        activity: state.activity,
         words: state.words,
       });
     }
@@ -1946,6 +2254,9 @@
           }
           if (parsed.settings && Array.isArray(parsed.settings.intervals)) {
             state.settings = { intervals: parsed.settings.intervals };
+          }
+          if (parsed.activity) {
+            state.activity = normalizeActivity(parsed.activity);
           }
           void persist();
           render();
@@ -2002,11 +2313,46 @@
       document.getElementById("input-meaning").value = state.form.meaning;
       document.getElementById("input-note").value = state.form.note;
       document.getElementById("btn-lookup").disabled = state.isFetchingMeaning || !state.form.word.trim();
-      document.getElementById("btn-lookup").textContent = state.isFetchingMeaning ? "查询中" : "获取中文释义";
+      document.getElementById("btn-lookup").textContent = state.isFetchingMeaning ? "查询中" : "获取简短释义";
       document.getElementById("btn-add-word").disabled = !state.form.word.trim();
       const errorEl = document.getElementById("fetch-error");
       errorEl.textContent = [state.fetchError, state.syncError].filter(Boolean).join(" ");
       errorEl.classList.toggle("hidden", !errorEl.textContent);
+    }
+
+    function renderCheckinPanel() {
+      const stats = getCheckinStats();
+      const statusEl = document.getElementById("checkin-status");
+      const streakEl = document.getElementById("checkin-streak");
+      const totalEl = document.getElementById("checkin-total");
+      const titleEl = document.getElementById("checkin-calendar-title");
+      const weekdaysEl = document.getElementById("checkin-weekdays");
+      const gridEl = document.getElementById("checkin-calendar-grid");
+      const buttonEl = document.getElementById("btn-checkin");
+      const monthDate = getCalendarMonthDate(state.checkinCalendarOffset);
+      const calendarDays = getCalendarDays(state.checkinCalendarOffset);
+      const today = todayDate();
+
+      statusEl.textContent = stats.checkedInToday ? "今日已签到" : "今日待签到";
+      streakEl.textContent = `${stats.streak} 天`;
+      totalEl.textContent = `${stats.total} 天`;
+      buttonEl.disabled = stats.checkedInToday;
+      buttonEl.textContent = stats.checkedInToday ? "今日已签到" : "今日签到";
+      titleEl.textContent = formatCalendarTitle(monthDate);
+      weekdaysEl.innerHTML = WEEKDAY_LABELS.map((item) => `<div class="checkin-weekday">${item}</div>`).join("");
+
+      gridEl.innerHTML = calendarDays
+        .map((item) => {
+          const checked = state.activity.checkinDates.includes(item.date);
+          const isToday = item.date === today;
+          return `
+            <div class="checkin-day ${checked ? "on" : "off"} ${isToday ? "today" : ""} ${item.inCurrentMonth ? "" : "other-month"}">
+              <strong>${item.day}</strong>
+              <span>${checked ? "已签" : "未签"}</span>
+            </div>
+          `;
+        })
+        .join("");
     }
 
     function renderTop() {
@@ -2031,10 +2377,12 @@
       document.getElementById("stat-today-learned").textContent = String(stats.todayLearned);
       document.getElementById("stat-due-words").textContent = String(stats.dueWords);
       document.getElementById("stat-due-steps").textContent = String(stats.totalDueSteps);
+      renderCheckinPanel();
     }
 
     function renderToday() {
       const dueToday = getDueToday();
+      const backlog = getBacklogSummary();
       const focusPanelEl = document.getElementById("today-focus-panel");
       const listEl = document.getElementById("today-list");
       const emptyEl = document.getElementById("today-empty");
@@ -2053,6 +2401,15 @@
             <button class="btn btn-outline" id="btn-reset-session" ${dueToday.length ? "" : "disabled"}>重新生成队列</button>
           </div>
         </div>
+        ${
+          backlog.missedUnits > 0
+            ? `<div class="review-backlog">${
+                backlog.gapDays > 0
+                  ? `你距离上次上线已经 ${backlog.gapDays} 天，今天会补复习 ${backlog.missedWords} 个单词的 ${backlog.missedUnits} 个漏掉轮次。`
+                  : `今天有 ${backlog.missedWords} 个单词、共 ${backlog.missedUnits} 个轮次来自之前错过的复习日期。`
+              }</div>`
+            : ""
+        }
         <div class="muted">当前共有 ${dueToday.length} 个待复习单词，进入后会按队列逐个展示。</div>
       `;
 
@@ -2343,6 +2700,19 @@
       });
       document.getElementById("btn-export").addEventListener("click", exportData);
       document.getElementById("btn-settings").addEventListener("click", applyIntervalsByPrompt);
+      document.getElementById("btn-checkin").addEventListener("click", checkInToday);
+      document.getElementById("btn-checkin-prev").addEventListener("click", () => {
+        state.checkinCalendarOffset -= 1;
+        renderCheckinPanel();
+      });
+      document.getElementById("btn-checkin-next").addEventListener("click", () => {
+        state.checkinCalendarOffset += 1;
+        renderCheckinPanel();
+      });
+      document.getElementById("btn-checkin-today").addEventListener("click", () => {
+        state.checkinCalendarOffset = 0;
+        renderCheckinPanel();
+      });
       document.getElementById("btn-lookup").addEventListener("click", handleLookupMeaning);
       document.getElementById("btn-add-word").addEventListener("click", addWord);
 
@@ -2367,6 +2737,10 @@
         e.preventDefault();
         if (!state.form.word.trim() || state.isFetchingMeaning) return;
         void addWord();
+      });
+
+      document.getElementById("input-meaning").addEventListener("input", (e) => {
+        state.form.meaning = e.target.value;
       });
 
       document.getElementById("input-note").addEventListener("input", (e) => {
@@ -2418,6 +2792,7 @@
       if (!loggedIn) return;
       await loadState();
       if (!state.currentUser) return;
+      touchLastActiveDate();
       const initialTab = consumeInitialTab();
       if (isReviewRoute()) {
         state.currentTab = "session";

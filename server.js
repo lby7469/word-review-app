@@ -33,6 +33,7 @@ const DATABASE_URL = process.env.DATABASE_URL || "";
 const DATA_DIR = path.join(__dirname, ".local-data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const STATES_FILE = path.join(DATA_DIR, "states.json");
+const MYMEMORY_API_URL = "https://api.mymemory.translated.net/get";
 
 function nowIso() {
   return new Date().toISOString();
@@ -42,6 +43,7 @@ function defaultState() {
   return {
     words: [],
     settings: { intervals: DEFAULT_INTERVALS.slice() },
+    activity: { checkinDates: [], lastActiveDate: "" },
     updatedAt: nowIso(),
   };
 }
@@ -126,13 +128,54 @@ function sanitizeIntervals(intervals) {
   return cleaned.length ? Array.from(new Set(cleaned)).sort((a, b) => a - b) : DEFAULT_INTERVALS.slice();
 }
 
+function sanitizeActivity(activity) {
+  const checkinDates = Array.isArray(activity?.checkinDates)
+    ? Array.from(
+        new Set(
+          activity.checkinDates.filter((value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
+        )
+      ).sort()
+    : [];
+
+  return {
+    checkinDates,
+    lastActiveDate:
+      typeof activity?.lastActiveDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(activity.lastActiveDate)
+        ? activity.lastActiveDate
+        : "",
+  };
+}
+
 function sanitizeState(input) {
   return {
     words: Array.isArray(input?.words) ? input.words : [],
     settings: {
       intervals: sanitizeIntervals(input?.settings?.intervals),
     },
+    activity: sanitizeActivity(input?.activity),
   };
+}
+
+async function lookupMeaningWithMyMemory(word) {
+  const q = String(word || "").trim();
+  if (!q) {
+    throw new Error("empty_word");
+  }
+
+  const url =
+    `${MYMEMORY_API_URL}?q=${encodeURIComponent(q)}&langpair=${encodeURIComponent("en|zh-CN")}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error("mymemory_request_failed");
+  }
+
+  const data = await response.json();
+  const translation = typeof data?.responseData?.translatedText === "string"
+    ? data.responseData.translatedText
+    : "";
+
+  return String(translation || "").trim();
 }
 
 class FileStore {
@@ -194,6 +237,7 @@ class FileStore {
     const nextState = {
       words: state.words,
       settings: state.settings,
+      activity: state.activity,
       updatedAt: nowIso(),
     };
     states[userId] = nextState;
@@ -227,8 +271,14 @@ class PostgresStore {
         user_id UUID PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
         words JSONB NOT NULL DEFAULT '[]'::jsonb,
         settings JSONB NOT NULL DEFAULT '{"intervals":[0,1,2,4,7,15,30]}'::jsonb,
+        activity JSONB NOT NULL DEFAULT '{"checkinDates":[],"lastActiveDate":""}'::jsonb,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE user_states
+      ADD COLUMN IF NOT EXISTS activity JSONB NOT NULL DEFAULT '{"checkinDates":[],"lastActiveDate":""}'::jsonb
     `);
   }
 
@@ -272,7 +322,7 @@ class PostgresStore {
   async getStateByUserId(userId) {
     const result = await this.pool.query(
       `
-        SELECT words, settings, updated_at AS "updatedAt"
+        SELECT words, settings, activity, updated_at AS "updatedAt"
         FROM user_states
         WHERE user_id = $1
       `,
@@ -284,16 +334,17 @@ class PostgresStore {
   async saveState(userId, state) {
     const result = await this.pool.query(
       `
-        INSERT INTO user_states (user_id, words, settings, updated_at)
-        VALUES ($1, $2::jsonb, $3::jsonb, NOW())
+        INSERT INTO user_states (user_id, words, settings, activity, updated_at)
+        VALUES ($1, $2::jsonb, $3::jsonb, $4::jsonb, NOW())
         ON CONFLICT (user_id)
         DO UPDATE SET
           words = EXCLUDED.words,
           settings = EXCLUDED.settings,
+          activity = EXCLUDED.activity,
           updated_at = NOW()
-        RETURNING words, settings, updated_at AS "updatedAt"
+        RETURNING words, settings, activity, updated_at AS "updatedAt"
       `,
-      [userId, JSON.stringify(state.words), JSON.stringify(state.settings)]
+      [userId, JSON.stringify(state.words), JSON.stringify(state.settings), JSON.stringify(state.activity)]
     );
     return result.rows[0];
   }
@@ -424,6 +475,29 @@ async function main() {
 
   app.get("/api/auth/me", (req, res) => {
     res.json({ user: req.user });
+  });
+
+  app.post("/api/lookup/meaning", async (req, res) => {
+    const word = String(req.body?.word || "").trim();
+    if (!word) {
+      return res.status(400).json({ error: "请输入要查询的单词。" });
+    }
+
+    try {
+      const meaning = await lookupMeaningWithMyMemory(word);
+      if (!meaning) {
+        return res.status(404).json({ error: "未查询到简短释义。" });
+      }
+      res.json({ meaning, provider: "mymemory" });
+    } catch (error) {
+      if (error.message === "mymemory_request_failed") {
+        return res.status(502).json({ error: "MyMemory 接口调用失败。" });
+      }
+      if (error.message === "empty_word") {
+        return res.status(400).json({ error: "请输入要查询的单词。" });
+      }
+      throw error;
+    }
   });
 
   app.get("/api/state", async (req, res) => {

@@ -119,7 +119,7 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-top: 24px;
     }
@@ -162,9 +162,6 @@
     .stats .stat-box:nth-child(2)::before { background: linear-gradient(90deg, #155e75, #67e8f9); }
     .stats .stat-box:nth-child(3) .stat-value { color: #b45309; }
     .stats .stat-box:nth-child(3)::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
-    .stats .stat-box:nth-child(4) .stat-value { color: #b45309; }
-    .stats .stat-box:nth-child(4)::before { background: linear-gradient(90deg, #b45309, #fdba74); }
-
     .section-title {
       margin: 0 0 8px;
       font-size: 24px;
@@ -1182,10 +1179,6 @@
             <div class="stat-label">待复习单词</div>
             <div class="stat-value" id="stat-due-words">0</div>
           </div>
-          <div class="stat-box">
-            <div class="stat-label">待复习次数</div>
-            <div class="stat-value" id="stat-due-steps">0</div>
-          </div>
         </div>
       </div>
     </div>
@@ -1337,7 +1330,8 @@
     const REVIEW_PAGE_URL = "/app/review";
     const AUTH_ME_URL = "/api/auth/me";
     const API_STATE_URL = "/api/state";
-    const LOOKUP_MEANING_URL = "/api/lookup/meaning";
+    const DICTIONARY_API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en/";
+    const TRANSLATE_API_BASE = "https://api.mymemory.translated.net/get";
     const DEFAULT_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
     const REINFORCEMENT_INTERVALS = [0, 1, 2];
     const MAX_MEANING_LENGTH = 24;
@@ -1706,19 +1700,79 @@
       return cleaned.toLowerCase() !== String(word || "").trim().toLowerCase();
     }
 
+    function extractMeaningFromDictionaryData(data) {
+      if (!Array.isArray(data) || data.length === 0) return "";
+
+      const lines = [];
+      for (const entry of data) {
+        for (const meaning of entry.meanings || []) {
+          const partOfSpeech = meaning.partOfSpeech ? `【${meaning.partOfSpeech}】` : "";
+          const definitions = (meaning.definitions || [])
+            .slice(0, 2)
+            .map((item) => item.definition)
+            .filter(Boolean);
+
+          if (definitions.length > 0) {
+            lines.push(`${partOfSpeech}${definitions.join("；")}`);
+          }
+        }
+      }
+
+      return lines.slice(0, 3).join(" / ");
+    }
+
+    async function translateTextToChinese(text) {
+      const cleaned = text.trim();
+      if (!cleaned) return "";
+
+      const url =
+        TRANSLATE_API_BASE +
+        "?q=" +
+        encodeURIComponent(cleaned) +
+        "&langpair=" +
+        encodeURIComponent("en|zh-CN");
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("中文释义翻译失败");
+      }
+
+      const data = await response.json();
+      const translated = data?.responseData?.translatedText;
+      if (!translated || typeof translated !== "string") {
+        throw new Error("中文释义翻译失败");
+      }
+
+      return translated.trim();
+    }
+
     async function fetchMeaning(word) {
       const cleaned = word.trim();
       if (!cleaned) return "";
 
-      const result = await apiRequest(LOOKUP_MEANING_URL, {
-        method: "POST",
-        body: JSON.stringify({ word: cleaned }),
-      });
+      try {
+        const directMeaning = trimMeaningText(await translateTextToChinese(cleaned));
+        if (isUsefulMeaning(directMeaning, cleaned)) {
+          return directMeaning;
+        }
+      } catch {}
 
-      const meaning = trimMeaningText(result?.meaning || "");
-      if (isUsefulMeaning(meaning, cleaned)) {
-        return meaning;
+      const response = await fetch(`${DICTIONARY_API_BASE}${encodeURIComponent(cleaned)}`);
+      if (!response.ok) {
+        throw new Error("简短释义获取失败");
       }
+
+      const data = await response.json();
+      const englishMeaning = extractMeaningFromDictionaryData(data);
+      if (!englishMeaning) {
+        throw new Error("未查询到明确释义");
+      }
+
+      const translatedMeaning = trimMeaningText(await translateTextToChinese(englishMeaning));
+      if (isUsefulMeaning(translatedMeaning, cleaned)) {
+        return translatedMeaning;
+      }
+
       throw new Error("未查询到简短释义");
     }
 
@@ -2487,7 +2541,6 @@
       document.getElementById("stat-total-words").textContent = String(stats.totalWords);
       document.getElementById("stat-today-learned").textContent = String(stats.todayLearned);
       document.getElementById("stat-due-words").textContent = String(stats.dueWords);
-      document.getElementById("stat-due-steps").textContent = String(stats.totalDueSteps);
       document.getElementById("calendar-entry-title").textContent =
         `${todayDate()} · ${checkinStats.checkedInToday ? "今日已签到" : "去签到"}`;
       document.getElementById("calendar-entry-desc").textContent =

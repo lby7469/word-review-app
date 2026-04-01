@@ -567,7 +567,8 @@
     }
 
     .hero-card .row-between,
-    .hero-card .stats {
+    .hero-card .stats,
+    .hero-dashboard {
       position: relative;
       z-index: 1;
     }
@@ -941,18 +942,24 @@
     }
 
     .hero-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .hero-dashboard {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
       gap: 18px;
-      flex-wrap: wrap;
+      align-items: start;
+    }
+
+    .hero-dashboard .stats {
+      margin-top: 0;
     }
 
     .hero-side-box {
       display: grid;
       gap: 12px;
-      min-width: 250px;
-      flex: 0 0 280px;
+      align-content: start;
     }
 
     .hero-account-box {
@@ -1140,6 +1147,8 @@
       .session-card { min-height: 460px; }
       .session-footer { align-items: stretch; }
       .session-footer > * { width: 100%; }
+      .hero-dashboard { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; margin-top: 0; }
     }
   </style>
 </head>
@@ -1152,6 +1161,24 @@
             <h1 class="title">单词记忆与复习</h1>
             <div class="desc">本地存储 · 自动按北京时间安排复习 · 基于艾宾浩斯遗忘曲线</div>
           </div>
+        </div>
+
+        <div class="hero-dashboard">
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-label">总单词数</div>
+              <div class="stat-value" id="stat-total-words">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">今日新增</div>
+              <div class="stat-value" id="stat-today-learned">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">待复习单词</div>
+              <div class="stat-value" id="stat-due-words">0</div>
+            </div>
+          </div>
+
           <div class="hero-side-box">
             <div class="hero-account-box">
               <div class="account-label">当前登录账号</div>
@@ -1163,21 +1190,6 @@
               <div class="calendar-entry-desc" id="calendar-entry-desc">点击进入日历界面，查看日期并完成签到。</div>
             </button>
             <button class="btn btn-outline" id="btn-logout" type="button">退出登录</button>
-          </div>
-        </div>
-
-        <div class="stats">
-          <div class="stat-box">
-            <div class="stat-label">总单词数</div>
-            <div class="stat-value" id="stat-total-words">0</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">今日新增</div>
-            <div class="stat-value" id="stat-today-learned">0</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">待复习单词</div>
-            <div class="stat-value" id="stat-due-words">0</div>
           </div>
         </div>
       </div>

@@ -567,6 +567,10 @@
     }
 
     .hero-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1.16fr) 280px;
+      gap: 16px;
+      align-items: stretch;
       background:
         radial-gradient(circle at top right, rgba(15, 118, 110, 0.18), transparent 34%),
         radial-gradient(circle at bottom left, rgba(255, 214, 153, 0.18), transparent 28%),
@@ -575,7 +579,8 @@
 
     .hero-card .row-between,
     .hero-card .stats,
-    .hero-dashboard {
+    .hero-top,
+    .hero-side-box {
       position: relative;
       z-index: 1;
     }
@@ -958,21 +963,31 @@
     }
 
     .hero-top {
-      margin-bottom: 18px;
+      grid-column: 1;
+      grid-row: 1;
+      margin-bottom: 0;
     }
 
     .hero-dashboard {
-      display: grid;
-      grid-template-columns: minmax(0, 1.16fr) 280px;
-      gap: 16px;
-      align-items: start;
+      display: contents;
     }
 
     .hero-dashboard .stats {
+      grid-column: 1;
+      grid-row: 2;
       margin-top: 0;
+      height: 100%;
+      align-items: stretch;
+    }
+
+    .hero-card .stats .stat-box {
+      min-height: 148px;
+      height: 100%;
     }
 
     .hero-side-box {
+      grid-column: 2;
+      grid-row: 1 / span 2;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 10px;
@@ -1187,13 +1202,24 @@
         font-size: 32px;
       }
 
-      .hero-dashboard,
       .focus-entry {
         grid-template-columns: 1fr;
       }
 
+      .hero-card {
+        grid-template-columns: 1fr;
+      }
+
       .hero-side-box {
+        grid-column: 1;
+        grid-row: auto;
         grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .hero-top,
+      .hero-dashboard .stats {
+        grid-column: 1;
+        grid-row: auto;
       }
     }
 
@@ -1219,7 +1245,7 @@
       .session-footer { align-items: stretch; }
       .session-footer > * { width: 100%; }
       .stats { grid-template-columns: 1fr; margin-top: 0; }
-      .hero-top { margin-bottom: 14px; }
+      .hero-card { gap: 14px; }
       .hero-side-box { grid-template-columns: 1fr; }
       .hero-side-box > .btn-outline { width: 100%; }
     }

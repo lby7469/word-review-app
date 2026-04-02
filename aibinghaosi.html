@@ -61,9 +61,9 @@
     }
 
     .container {
-      max-width: 1240px;
+      max-width: 1280px;
       margin: 0 auto;
-      padding: 32px 22px 48px;
+      padding: 36px 24px 56px;
     }
 
     .grid-top {
@@ -77,9 +77,9 @@
       background: var(--card);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
-      border-radius: 28px;
+      border-radius: 30px;
       box-shadow: var(--shadow);
-      padding: 24px;
+      padding: 26px;
       border: 1px solid rgba(255,255,255,0.72);
       position: relative;
       overflow: hidden;
@@ -95,18 +95,18 @@
     }
 
     .title {
-      font-size: 38px;
-      line-height: 1.06;
+      font-size: 42px;
+      line-height: 1.02;
       font-weight: 800;
       letter-spacing: -0.03em;
-      margin: 0 0 12px;
+      margin: 0 0 14px;
     }
 
     .desc {
       color: var(--muted);
-      font-size: 14px;
-      line-height: 1.8;
-      max-width: 56ch;
+      font-size: 15px;
+      line-height: 1.85;
+      max-width: 60ch;
     }
 
     .row-between {
@@ -120,19 +120,22 @@
     .stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
+      gap: 18px;
       margin-top: 24px;
     }
 
     .stat-box {
-      border-radius: 22px;
+      border-radius: 24px;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(242,247,243,0.86));
-      padding: 16px;
+        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(242,247,243,0.88));
+      padding: 18px;
       border: 1px solid rgba(111, 138, 131, 0.16);
       box-shadow: var(--shadow-soft);
       position: relative;
       overflow: hidden;
+      min-height: 140px;
+      display: grid;
+      align-content: space-between;
     }
 
     .stat-box::before {
@@ -145,15 +148,18 @@
     }
 
     .stat-label {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--muted);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     .stat-value {
-      font-size: 30px;
+      font-size: 36px;
       font-weight: 800;
       letter-spacing: -0.03em;
+      line-height: 1;
     }
 
     .stats .stat-box:nth-child(1) .stat-value { color: #0f766e; }
@@ -562,8 +568,9 @@
 
     .hero-card {
       background:
-        radial-gradient(circle at top right, rgba(15, 118, 110, 0.16), transparent 34%),
-        linear-gradient(145deg, rgba(255,255,255,0.94), rgba(238,247,242,0.78));
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.18), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(255, 214, 153, 0.18), transparent 28%),
+        linear-gradient(145deg, rgba(255,255,255,0.96), rgba(238,247,242,0.82));
     }
 
     .hero-card .row-between,
@@ -595,12 +602,12 @@
 
     .tab-shell {
       display: grid;
-      gap: 18px;
+      gap: 22px;
     }
 
     .surface-panel {
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,244,237,0.8));
+        linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,244,237,0.84));
     }
 
     .empty-title {
@@ -904,13 +911,22 @@
     .calendar-entry-btn {
       width: 100%;
       border: 1px solid rgba(111, 138, 131, 0.16);
-      border-radius: 22px;
-      padding: 16px 18px;
-      background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(238,247,242,0.8));
+      border-radius: 24px;
+      padding: 18px 20px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 34%),
+        linear-gradient(145deg, rgba(255,255,255,0.95), rgba(238,247,242,0.84));
       text-align: left;
       color: var(--text);
       cursor: pointer;
       box-shadow: var(--shadow-soft);
+      transition: transform .16s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+
+    .calendar-entry-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 38px rgba(54, 74, 67, 0.12);
+      border-color: rgba(15, 118, 110, 0.2);
     }
 
     .calendar-entry-kicker {
@@ -938,17 +954,17 @@
 
     .calendar-shell {
       display: grid;
-      gap: 18px;
+      gap: 22px;
     }
 
     .hero-top {
-      margin-bottom: 24px;
+      margin-bottom: 28px;
     }
 
     .hero-dashboard {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 280px;
-      gap: 18px;
+      grid-template-columns: minmax(0, 1.12fr) 300px;
+      gap: 22px;
       align-items: start;
     }
 
@@ -958,28 +974,65 @@
 
     .hero-side-box {
       display: grid;
-      gap: 12px;
+      gap: 14px;
       align-content: start;
     }
 
     .hero-account-box {
-      padding: 14px 16px;
-      border-radius: 20px;
-      background: rgba(255,255,255,0.68);
+      padding: 16px 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.74);
       border: 1px solid rgba(111, 138, 131, 0.16);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .hero-side-box > .btn-outline {
+      width: 100%;
     }
 
     .focus-entry {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
       gap: 18px;
-      flex-wrap: wrap;
+      align-items: stretch;
       margin-bottom: 18px;
     }
 
     .focus-copy {
-      flex: 1 1 320px;
+      min-width: 0;
+    }
+
+    .focus-brief {
+      min-width: 0;
+      border-radius: 22px;
+      padding: 16px 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(241,247,244,0.82));
+      border: 1px solid rgba(111, 138, 131, 0.14);
+      display: grid;
+      gap: 12px;
+    }
+
+    .focus-brief-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .focus-rule-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .focus-rule {
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      color: var(--text-soft);
+      line-height: 1.7;
+      font-size: 14px;
     }
 
     .focus-kicker {
@@ -1005,7 +1058,7 @@
 
     .session-wrap {
       display: grid;
-      gap: 18px;
+      gap: 22px;
     }
 
     .session-card {
@@ -1022,9 +1075,9 @@
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 16px;
+      gap: 18px;
       flex-wrap: wrap;
-      margin-bottom: 28px;
+      margin-bottom: 30px;
     }
 
     .session-badge {
@@ -1124,11 +1177,16 @@
       .title {
         font-size: 32px;
       }
+
+      .hero-dashboard,
+      .focus-entry {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 720px) {
-      .container { padding: 16px 14px 28px; }
-      .title { font-size: 24px; }
+      .container { padding: 18px 14px 32px; }
+      .title { font-size: 28px; }
       .tabs { grid-template-columns: 1fr 1fr 1fr; }
       .due-card { flex-direction: column; }
       .due-side { flex: 1 1 auto; }
@@ -1136,8 +1194,8 @@
       .search-sort { width: 100%; }
       .search-sort > * { flex: 1 1 100%; }
       .inline-group { flex-direction: column; }
-      .card { padding: 18px; border-radius: 24px; }
-      .stat-value { font-size: 26px; }
+      .card { padding: 20px; border-radius: 24px; }
+      .stat-value { font-size: 30px; }
       .tabs { top: 10px; }
       .due-word { font-size: 24px; }
       .word-header { flex-direction: column; }
@@ -1147,7 +1205,6 @@
       .session-card { min-height: 460px; }
       .session-footer { align-items: stretch; }
       .session-footer > * { width: 100%; }
-      .hero-dashboard { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; margin-top: 0; }
     }
   </style>
@@ -2576,9 +2633,17 @@
               每个需要复习的单词今天默认展示 2 次。第一次点“认识”会回到队尾，第二次再点“认识”才算今天完成；如果任意一次点“不认识”，这个单词今天还需要额外再展示 3 次。
             </div>
           </div>
-          <div class="focus-actions">
-            <button class="btn" id="btn-start-session" ${dueToday.length ? "" : "disabled"}>开始专注复习</button>
-            <button class="btn btn-outline" id="btn-reset-session" ${dueToday.length ? "" : "disabled"}>重新生成队列</button>
+          <div class="focus-brief">
+            <div class="focus-brief-title">今日行动摘要</div>
+            <div class="focus-rule-list">
+              <div class="focus-rule">待过一遍的单词：${dueToday.length} 个</div>
+              <div class="focus-rule">错过的历史轮次：${backlog.missedUnits} 次</div>
+              <div class="focus-rule">建议先进入专注模式，把今天的队列完整走完。</div>
+            </div>
+            <div class="focus-actions">
+              <button class="btn" id="btn-start-session" ${dueToday.length ? "" : "disabled"}>开始专注复习</button>
+              <button class="btn btn-outline" id="btn-reset-session" ${dueToday.length ? "" : "disabled"}>重新生成队列</button>
+            </div>
           </div>
         </div>
         ${

@@ -420,6 +420,35 @@
       margin-top: 8px;
     }
 
+    .success-box {
+      position: fixed;
+      top: 22px;
+      right: 22px;
+      width: min(360px, calc(100vw - 28px));
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(241, 251, 247, 0.98), rgba(223, 244, 235, 0.96));
+      border: 1px solid rgba(15, 118, 110, 0.18);
+      color: #0f5f58;
+      box-shadow: 0 22px 48px rgba(24, 61, 55, 0.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      z-index: 40;
+    }
+
+    .success-title {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .success-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-soft);
+      word-break: break-word;
+    }
+
     .all-top {
       display: flex;
       gap: 12px;
@@ -1430,6 +1459,11 @@
     </div>
   </div>
 
+  <div id="add-success-box" class="success-box hidden" role="status" aria-live="polite">
+    <div class="success-title">Add success!</div>
+    <div id="add-success-text" class="success-text"></div>
+  </div>
+
   <script>
     const STORAGE_KEY = "ebbinghaus_words_local_v1";
     const SETTINGS_KEY = "ebbinghaus_settings_v1";
@@ -1447,6 +1481,7 @@
     const REINFORCEMENT_INTERVALS = [0, 1, 2];
     const MAX_MEANING_LENGTH = 24;
     const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
+    let addSuccessTimer = null;
 
     const state = {
       words: [],
@@ -1457,6 +1492,7 @@
       sortBy: "newest",
       isFetchingMeaning: false,
       fetchError: "",
+      addSuccessMessage: "",
       syncError: "",
       syncStatus: "正在验证登录状态",
       backendReady: false,
@@ -2511,8 +2547,29 @@
 
       state.words.unshift(item);
       state.form = { word: "", meaning: "", note: "" };
+      showAddToast(item);
       void persist();
       render();
+    }
+
+    function showAddSuccess(word) {
+      state.addSuccessMessage = `${word.word}: ${word.meaning || "暂无释义"}`;
+      syncFormUI();
+      if (addSuccessTimer) clearTimeout(addSuccessTimer);
+      addSuccessTimer = setTimeout(() => {
+        state.addSuccessMessage = "";
+        syncFormUI();
+      }, 3000);
+    }
+
+    function showAddToast(word) {
+      state.addSuccessMessage = `${word.word} · ${word.meaning || "暂无释义"}`;
+      syncFormUI();
+      if (addSuccessTimer) clearTimeout(addSuccessTimer);
+      addSuccessTimer = setTimeout(() => {
+        state.addSuccessMessage = "";
+        syncFormUI();
+      }, 3000);
     }
 
     function exportData() {
@@ -2602,6 +2659,10 @@
       const errorEl = document.getElementById("fetch-error");
       errorEl.textContent = [state.fetchError, state.syncError].filter(Boolean).join(" ");
       errorEl.classList.toggle("hidden", !errorEl.textContent);
+      const successEl = document.getElementById("add-success-box");
+      const successTextEl = document.getElementById("add-success-text");
+      successTextEl.textContent = state.addSuccessMessage;
+      successEl.classList.toggle("hidden", !state.addSuccessMessage);
     }
 
     function renderCheckinPanel() {

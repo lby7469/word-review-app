@@ -1444,6 +1444,7 @@
           </div>
 
           <div class="search-sort">
+            <button id="btn-retranslate-all" class="btn btn-outline" type="button">重新翻译全部词义</button>
             <input id="input-search" class="input" placeholder="搜索单词 / 中文释义 / 备注" style="min-width:260px;" />
             <select id="select-sort" class="select" style="min-width:140px;">
               <option value="newest">最新添加</option>
@@ -1495,6 +1496,7 @@
       query: "",
       sortBy: "newest",
       isFetchingMeaning: false,
+      isBulkRetranslating: false,
       fetchError: "",
       addSuccessMessage: "",
       syncError: "",
@@ -2544,6 +2546,45 @@
       render();
     }
 
+    async function retranslateAllMeanings() {
+      if (!state.words.length || state.isBulkRetranslating) return;
+
+      const confirmed = window.confirm(`将重新翻译当前账户下 ${state.words.length} 个单词的词义，并覆盖原有释义。是否继续？`);
+      if (!confirmed) return;
+
+      state.isBulkRetranslating = true;
+      state.fetchError = "";
+      state.addSuccessMessage = "";
+      syncFormUI();
+
+      let successCount = 0;
+
+      try {
+        for (let index = 0; index < state.words.length; index += 1) {
+          const current = state.words[index];
+          try {
+            const meaning = await fetchMeaning(current.word);
+            if (!meaning) continue;
+            state.words[index] = normalizeWord({
+              ...current,
+              meaning,
+            });
+            successCount += 1;
+          } catch {}
+        }
+
+        if (successCount > 0) {
+          state.addSuccessMessage = `已重新翻译 ${successCount} 个单词`;
+          await persist();
+        } else {
+          state.fetchError = "批量重新翻译失败，未获取到新的词义。";
+        }
+      } finally {
+        state.isBulkRetranslating = false;
+        render();
+      }
+    }
+
     function showAddSuccess(word) {
       state.addSuccessMessage = `${word.word}: ${word.meaning || "暂无释义"}`;
       syncFormUI();
@@ -2650,6 +2691,11 @@
       document.getElementById("btn-lookup").textContent = state.isFetchingMeaning ? "查询中" : "获取简短释义";
       document.getElementById("btn-add-word").disabled = !state.form.word.trim();
       document.getElementById("btn-add-word").textContent = state.form.editingWordId ? "保存修改" : "保存这个单词";
+      const retranslateBtn = document.getElementById("btn-retranslate-all");
+      if (retranslateBtn) {
+        retranslateBtn.disabled = state.isBulkRetranslating || !state.words.length;
+        retranslateBtn.textContent = state.isBulkRetranslating ? "重新翻译中..." : "重新翻译全部词义";
+      }
       const errorEl = document.getElementById("fetch-error");
       errorEl.textContent = [state.fetchError, state.syncError].filter(Boolean).join(" ");
       errorEl.classList.toggle("hidden", !errorEl.textContent);
@@ -3098,6 +3144,10 @@
       document.getElementById("input-search").addEventListener("input", (e) => {
         state.query = e.target.value;
         renderAllWords();
+      });
+
+      document.getElementById("btn-retranslate-all").addEventListener("click", () => {
+        void retranslateAllMeanings();
       });
 
       document.getElementById("select-sort").addEventListener("change", (e) => {

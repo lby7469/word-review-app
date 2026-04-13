@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>å•è¯è®°å¿†ä¸Žå¤ä¹ </title>
+  <title>单词记忆与复习</title>
   <style>
     :root {
       --bg: #f4efe7;
@@ -1286,47 +1286,47 @@
       <div class="card hero-card">
         <div class="hero-top">
           <div>
-            <h1 class="title">å•è¯è®°å¿†ä¸Žå¤ä¹ </h1>
-            <div class="desc">æœ¬åœ°å­˜å‚¨ Â· è‡ªåŠ¨æŒ‰åŒ—äº¬æ—¶é—´å®‰æŽ’å¤ä¹  Â· åŸºäºŽè‰¾å®¾æµ©æ–¯é—å¿˜æ›²çº¿</div>
+            <h1 class="title">单词记忆与复习</h1>
+            <div class="desc">本地存储 · 自动按北京时间安排复习 · 基于艾宾浩斯遗忘曲线</div>
           </div>
         </div>
 
         <div class="hero-dashboard">
           <div class="stats">
             <div class="stat-box">
-              <div class="stat-label">æ€»å•è¯æ•°</div>
+              <div class="stat-label">总单词数</div>
               <div class="stat-value" id="stat-total-words">0</div>
             </div>
             <div class="stat-box">
-              <div class="stat-label">ä»Šæ—¥æ–°å¢ž</div>
+              <div class="stat-label">今日新增</div>
               <div class="stat-value" id="stat-today-learned">0</div>
             </div>
             <div class="stat-box">
-              <div class="stat-label">å¾…å¤ä¹ å•è¯</div>
+              <div class="stat-label">待复习单词</div>
               <div class="stat-value" id="stat-due-words">0</div>
             </div>
           </div>
 
           <div class="hero-side-box">
             <div class="hero-account-box">
-              <div class="account-label">å½“å‰ç™»å½•è´¦å·</div>
+              <div class="account-label">当前登录账号</div>
               <div class="account-value" id="auth-username">-</div>
             </div>
             <button class="calendar-entry-btn" id="btn-open-calendar" type="button">
               <div class="calendar-entry-kicker">Calendar</div>
-              <div class="calendar-entry-title" id="calendar-entry-title">ä»Šæ—¥å¾…ç­¾åˆ°</div>
-              <div class="calendar-entry-desc" id="calendar-entry-desc">ç‚¹å‡»è¿›å…¥æ—¥åŽ†ç•Œé¢ï¼ŒæŸ¥çœ‹æ—¥æœŸå¹¶å®Œæˆç­¾åˆ°ã€‚</div>
+              <div class="calendar-entry-title" id="calendar-entry-title">今日待签到</div>
+              <div class="calendar-entry-desc" id="calendar-entry-desc">点击进入日历界面，查看日期并完成签到。</div>
             </button>
-            <button class="btn btn-outline" id="btn-logout" type="button">é€€å‡ºç™»å½•</button>
+            <button class="btn btn-outline" id="btn-logout" type="button">退出登录</button>
           </div>
         </div>
       </div>
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="today">ä»Šæ—¥å¤ä¹ </button>
-      <button class="tab-btn" data-tab="add">æ–°å¢žå•è¯</button>
-      <button class="tab-btn" data-tab="all">å…¨éƒ¨å•è¯</button>
+      <button class="tab-btn active" data-tab="today">今日复习</button>
+      <button class="tab-btn" data-tab="add">新增单词</button>
+      <button class="tab-btn" data-tab="all">全部单词</button>
     </div>
 
     <div id="tab-today" class="tab-shell">
@@ -1334,8 +1334,8 @@
       <div id="today-list" class="list"></div>
       <div id="today-empty" class="empty hidden">
         <div class="empty-copy">
-          <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">ä»Šå¤©æ²¡æœ‰å¾…å¤ä¹ çš„å•è¯</div>
-          <div>ä½ ä»Šå¤©å·²ç»å®Œæˆäº†å¤ä¹ ï¼Œæˆ–è€…è¿˜æ²¡æœ‰åˆ°éœ€è¦å¤ä¹ çš„æ—¥æœŸã€‚</div>
+          <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">今天没有待复习的单词</div>
+          <div>你今天已经完成了复习，或者还没有到需要复习的日期。</div>
         </div>
       </div>
     </div>
@@ -1350,41 +1350,41 @@
           <div class="row-between" style="margin-bottom: 16px;">
             <div>
               <div class="focus-kicker">Calendar Check-In</div>
-              <h2 class="section-title" style="margin-bottom:8px;">æ—¥æœŸä¸Žç­¾åˆ°</h2>
-              <div class="desc">åœ¨è¿™é‡ŒæŸ¥çœ‹æ•´æœˆç­¾åˆ°æƒ…å†µï¼Œä¹Ÿå¯ä»¥ç›´æŽ¥å®Œæˆä»Šå¤©çš„ç­¾åˆ°ã€‚</div>
+              <h2 class="section-title" style="margin-bottom:8px;">日期与签到</h2>
+              <div class="desc">在这里查看整月签到情况，也可以直接完成今天的签到。</div>
             </div>
             <div class="focus-actions">
-              <button class="btn" id="btn-checkin" type="button">ä»Šæ—¥ç­¾åˆ°</button>
-              <button class="btn btn-outline" id="btn-calendar-back" type="button">è¿”å›žä¸»é¡µ</button>
+              <button class="btn" id="btn-checkin" type="button">今日签到</button>
+              <button class="btn btn-outline" id="btn-calendar-back" type="button">返回主页</button>
             </div>
           </div>
 
           <div class="checkin-box" style="margin-top:0;">
             <div class="row-between">
               <div>
-                <div class="account-label">ç­¾åˆ°çŠ¶æ€</div>
-                <div class="checkin-status" id="checkin-status">ä»Šæ—¥æœªç­¾åˆ°</div>
+                <div class="account-label">签到状态</div>
+                <div class="checkin-status" id="checkin-status">今日未签到</div>
               </div>
             </div>
 
             <div class="checkin-grid">
               <div class="checkin-metric">
-                <div class="account-label">è¿žç»­ç­¾åˆ°</div>
-                <div class="account-value" id="checkin-streak">0 å¤©</div>
+                <div class="account-label">连续签到</div>
+                <div class="account-value" id="checkin-streak">0 天</div>
               </div>
               <div class="checkin-metric">
-                <div class="account-label">ç´¯è®¡ç­¾åˆ°</div>
-                <div class="account-value" id="checkin-total">0 å¤©</div>
+                <div class="account-label">累计签到</div>
+                <div class="account-value" id="checkin-total">0 天</div>
               </div>
             </div>
 
             <div class="checkin-calendar">
               <div class="checkin-calendar-top">
-                <div class="checkin-calendar-title" id="checkin-calendar-title">ç­¾åˆ°æ—¥åŽ†</div>
+                <div class="checkin-calendar-title" id="checkin-calendar-title">签到日历</div>
                 <div class="calendar-nav">
-                  <button class="icon-btn" id="btn-checkin-prev" type="button" title="ä¸Šä¸ªæœˆ">â†</button>
-                  <button class="icon-btn" id="btn-checkin-today" type="button" title="å›žåˆ°æœ¬æœˆ">ä»Š</button>
-                  <button class="icon-btn" id="btn-checkin-next" type="button" title="ä¸‹ä¸ªæœˆ">â†’</button>
+                  <button class="icon-btn" id="btn-checkin-prev" type="button" title="上个月">←</button>
+                  <button class="icon-btn" id="btn-checkin-today" type="button" title="回到本月">今</button>
+                  <button class="icon-btn" id="btn-checkin-next" type="button" title="下个月">→</button>
                 </div>
               </div>
               <div class="checkin-weekdays" id="checkin-weekdays"></div>
@@ -1397,21 +1397,21 @@
 
     <div id="tab-add" class="tab-shell hidden">
       <div class="card surface-panel">
-        <h2 class="section-title">è®°å½•ä»Šå¤©æ–°å­¦çš„å•è¯</h2>
-        <div class="desc" style="margin-bottom: 16px;">è¾“å…¥å•è¯åŽä¼šä¼˜å…ˆèŽ·å–æ›´çŸ­çš„ä¸­æ–‡è¯ä¹‰ï¼›å¦‚æžœä½ æƒ³å¾®è°ƒï¼Œä¹Ÿå¯ä»¥ç›´æŽ¥ç¼–è¾‘åŽå†ä¿å­˜</div>
+        <h2 class="section-title">记录今天新学的单词</h2>
+        <div class="desc" style="margin-bottom: 16px;">输入单词后会优先获取更短的中文词义；如果你想微调，也可以直接编辑后再保存</div>
 
         <div class="two-col">
           <div>
             <div class="field">
-              <label for="input-word">å•è¯</label>
-              <input id="input-word" class="input" placeholder="ä¾‹å¦‚ï¼šabandon" />
+              <label for="input-word">单词</label>
+              <input id="input-word" class="input" placeholder="例如：abandon" />
             </div>
 
             <div class="field">
-              <label for="input-meaning">è‡ªåŠ¨ä¸­æ–‡é‡Šä¹‰ï¼ˆå¯ç¼–è¾‘ï¼‰</label>
+              <label for="input-meaning">自动中文释义（可编辑）</label>
               <div class="inline-group">
-                <input id="input-meaning" class="input" placeholder="è¾“å…¥å•è¯åŽç‚¹å‡»èŽ·å–æ›´çŸ­çš„ä¸­æ–‡è¯ä¹‰" />
-                <button class="btn btn-outline" id="btn-lookup">èŽ·å–ç®€çŸ­é‡Šä¹‰</button>
+                <input id="input-meaning" class="input" placeholder="输入单词后点击获取更短的中文词义" />
+                <button class="btn btn-outline" id="btn-lookup">获取简短释义</button>
               </div>
               <div id="fetch-error" class="error hidden"></div>
             </div>
@@ -1419,17 +1419,12 @@
 
           <div>
             <div class="field">
-              <label for="input-added-at">加入时间</label>
-              <input id="input-added-at" class="input" type="datetime-local" />
-            </div>
-
-            <div class="field">
-              <label for="input-note">å¤‡æ³¨</label>
-              <textarea id="input-note" class="textarea" placeholder="ä¾‹å¥ã€è¯æ ¹è¯ç¼€ã€æ˜“é”™ç‚¹éƒ½å¯ä»¥è®°åœ¨è¿™é‡Œ"></textarea>
+              <label for="input-note">备注</label>
+              <textarea id="input-note" class="textarea" placeholder="例句、词根词缀、易错点都可以记在这里"></textarea>
             </div>
 
             <div class="hint-box compact-hint" id="today-record-date" style="margin-bottom:12px;"></div>
-            <button class="btn" id="btn-add-word" style="width:100%;">ä¿å­˜è¿™ä¸ªå•è¯</button>
+            <button class="btn" id="btn-add-word" style="width:100%;">保存这个单词</button>
           </div>
         </div>
       </div>
@@ -1439,16 +1434,16 @@
       <div class="card surface-panel">
         <div class="all-top" style="margin-bottom: 16px;">
           <div>
-            <h2 class="section-title" style="margin-bottom: 6px;">å…¨éƒ¨å•è¯</h2>
-            <div class="desc">æ”¯æŒæœç´¢ã€æŽ’åºã€æŸ¥çœ‹æ¯ä¸ªå•è¯çš„å¤ä¹ è®¡åˆ’</div>
+            <h2 class="section-title" style="margin-bottom: 6px;">全部单词</h2>
+            <div class="desc">支持搜索、排序、查看每个单词的复习计划</div>
           </div>
 
           <div class="search-sort">
-            <input id="input-search" class="input" placeholder="æœç´¢å•è¯ / ä¸­æ–‡é‡Šä¹‰ / å¤‡æ³¨" style="min-width:260px;" />
+            <input id="input-search" class="input" placeholder="搜索单词 / 中文释义 / 备注" style="min-width:260px;" />
             <select id="select-sort" class="select" style="min-width:140px;">
-              <option value="newest">æœ€æ–°æ·»åŠ </option>
-              <option value="oldest">æœ€æ—©æ·»åŠ </option>
-              <option value="due">ä¼˜å…ˆå¾…å¤ä¹ </option>
+              <option value="newest">最新添加</option>
+              <option value="oldest">最早添加</option>
+              <option value="due">优先待复习</option>
             </select>
           </div>
         </div>
@@ -1456,8 +1451,8 @@
         <div id="all-cards" class="cards-grid"></div>
         <div id="all-empty" class="empty hidden" style="margin-top: 4px;">
           <div class="empty-copy">
-            <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">è¿˜æ²¡æœ‰åŒ¹é…çš„å•è¯</div>
-            <div>ä½ å¯ä»¥å…ˆæ–°å¢žå‡ ä¸ªå•è¯ï¼Œæˆ–è€…æ¢ä¸€ä¸ªæœç´¢è¯ã€‚</div>
+            <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">还没有匹配的单词</div>
+            <div>你可以先新增几个单词，或者换一个搜索词。</div>
           </div>
         </div>
       </div>
@@ -1480,11 +1475,12 @@
     const REVIEW_PAGE_URL = "/app/review";
     const AUTH_ME_URL = "/api/auth/me";
     const API_STATE_URL = "/api/state";
-    const LOOKUP_MEANING_API_URL = "/api/lookup/meaning";
+    const DICTIONARY_API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en/";
+    const TRANSLATE_API_BASE = "https://api.mymemory.translated.net/get";
     const DEFAULT_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
     const REINFORCEMENT_INTERVALS = [0, 1, 2];
     const MAX_MEANING_LENGTH = 24;
-    const WEEKDAY_LABELS = ["ä¸€", "äºŒ", "ä¸‰", "å››", "äº”", "å…­", "æ—¥"];
+    const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
     let addSuccessTimer = null;
 
     const state = {
@@ -1498,7 +1494,7 @@
       fetchError: "",
       addSuccessMessage: "",
       syncError: "",
-      syncStatus: "æ­£åœ¨éªŒè¯ç™»å½•çŠ¶æ€",
+      syncStatus: "正在验证登录状态",
       backendReady: false,
       currentUser: null,
       reviewSession: {
@@ -1510,7 +1506,6 @@
         word: "",
         meaning: "",
         note: "",
-        addedAt: "",
       },
       lastActiveSnapshot: "",
       revealState: {}
@@ -1539,24 +1534,6 @@
         second: "2-digit",
         hour12: false,
       }).format(date);
-    }
-
-    function formatDateTimeInputValue(date) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      const hh = String(date.getHours()).padStart(2, "0");
-      const mm = String(date.getMinutes()).padStart(2, "0");
-      return `${y}-${m}-${d}T${hh}:${mm}`;
-    }
-
-    function getDefaultAddedAtInputValue() {
-      return formatDateTimeInputValue(getBeijingNow());
-    }
-
-    function parseAddedAtInput(value) {
-      const parsed = new Date(value);
-      return Number.isNaN(parsed.getTime()) ? getBeijingNow() : parsed;
     }
 
     function addDays(dateStr, days) {
@@ -1719,15 +1696,15 @@
             activity: state.activity,
           }),
         });
-        state.syncStatus = "å·²åŒæ­¥åˆ°äº‘ç«¯";
+        state.syncStatus = "已同步到云端";
         state.syncError = "";
       } catch (error) {
         if (error.status === 401) {
           handleAuthExpired();
           return;
         }
-        state.syncStatus = "äº‘ç«¯åŒæ­¥å¤±è´¥ï¼Œå·²ä¿ç•™æœ¬åœ°å¤‡ä»½";
-        state.syncError = "å½“å‰æ— æ³•å†™å…¥æœåŠ¡å™¨ï¼Œæ•°æ®å·²æš‚å­˜åˆ°æœ¬åœ°æµè§ˆå™¨ã€‚";
+        state.syncStatus = "云端同步失败，已保留本地备份";
+        state.syncError = "当前无法写入服务器，数据已暂存到本地浏览器。";
       }
     }
 
@@ -1747,7 +1724,7 @@
         offset: dayOffset,
         reviewDate: addDays(learnedDate, dayOffset),
         source: "main",
-        label: `ç¬¬ ${index + 1} æ¬¡ä¸»è®¡åˆ’å¤ä¹ `,
+        label: `第 ${index + 1} 次主计划复习`,
       }));
     }
 
@@ -1758,7 +1735,7 @@
         reviewDate: addDays(round.baseDate, dayOffset),
         source: "reinforcement",
         reinforcementId: round.id,
-        label: `ç¬¬ ${index + 1} æ¬¡å¼ºåŒ–å¤ä¹ `,
+        label: `第 ${index + 1} 次强化复习`,
       }));
     }
 
@@ -1821,20 +1798,20 @@
         .replace(/&#39;/gi, "'")
         .replace(/<[^>]+>/g, " ")
         .replace(/\s+/g, " ")
-        .replace(/\s*([,ï¼Œ;ï¼›/])\s*/g, "$1")
+        .replace(/\s*([,，;；/])\s*/g, "$1")
         .trim();
     }
 
     function trimMeaningText(text, maxLength = MAX_MEANING_LENGTH) {
       let value = normalizeMeaningText(text)
         .replace(/^(n|v|adj|adv|prep|pron|vt|vi|aux|num)\.\s*/i, "")
-        .replace(/^[ï¼š:;ï¼›,ï¼Œ/\-]+/, "")
+        .replace(/^[：:;；,，/\-]+/, "")
         .trim();
 
       if (!value) return "";
 
       const primaryParts = value
-        .split(/[ï¼›;\/,ï¼Œ]/)
+        .split(/[；;\/,，]/)
         .map((item) => item.trim())
         .filter(Boolean);
 
@@ -1846,14 +1823,14 @@
         value = primaryParts[0];
       }
 
-      value = value.split(/[ã€‚.!?ï¼ï¼Ÿ]/)[0].trim();
+      value = value.split(/[。.!?！？]/)[0].trim();
 
       if (value.length <= maxLength) {
         return value;
       }
 
       const shortClause = value
-        .split(/[ï¼Œ,ï¼ˆ(]/)
+        .split(/[，,（(]/)
         .map((item) => item.trim())
         .find(Boolean);
 
@@ -1870,27 +1847,77 @@
       return cleaned.toLowerCase() !== String(word || "").trim().toLowerCase();
     }
 
+    function extractMeaningFromDictionaryData(data) {
+      if (!Array.isArray(data) || data.length === 0) return "";
+
+      const lines = [];
+      for (const entry of data) {
+        for (const meaning of entry.meanings || []) {
+          const partOfSpeech = meaning.partOfSpeech ? `【${meaning.partOfSpeech}】` : "";
+          const definitions = (meaning.definitions || [])
+            .slice(0, 2)
+            .map((item) => item.definition)
+            .filter(Boolean);
+
+          if (definitions.length > 0) {
+            lines.push(`${partOfSpeech}${definitions.join("；")}`);
+          }
+        }
+      }
+
+      return lines.slice(0, 3).join(" / ");
+    }
+
+    async function translateTextToChinese(text) {
+      const cleaned = text.trim();
+      if (!cleaned) return "";
+
+      const url =
+        TRANSLATE_API_BASE +
+        "?q=" +
+        encodeURIComponent(cleaned) +
+        "&langpair=" +
+        encodeURIComponent("en|zh-CN");
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("中文释义翻译失败");
+      }
+
+      const data = await response.json();
+      const translated = data?.responseData?.translatedText;
+      if (!translated || typeof translated !== "string") {
+        throw new Error("中文释义翻译失败");
+      }
+
+      return translated.trim();
+    }
+
     async function fetchMeaning(word) {
       const cleaned = word.trim();
       if (!cleaned) return "";
 
-      let result;
       try {
-        result = await apiRequest(LOOKUP_MEANING_API_URL, {
-          method: "POST",
-          body: JSON.stringify({ word: cleaned }),
-        });
-      } catch (error) {
-        if (error.status === 401) {
-          handleAuthExpired();
-          return "";
+        const directMeaning = trimMeaningText(await translateTextToChinese(cleaned));
+        if (isUsefulMeaning(directMeaning, cleaned)) {
+          return directMeaning;
         }
-        throw error;
+      } catch {}
+
+      const response = await fetch(`${DICTIONARY_API_BASE}${encodeURIComponent(cleaned)}`);
+      if (!response.ok) {
+        throw new Error("简短释义获取失败");
       }
 
-      const meaning = trimMeaningText(result?.meaning || "");
-      if (isUsefulMeaning(meaning, cleaned)) {
-        return meaning;
+      const data = await response.json();
+      const englishMeaning = extractMeaningFromDictionaryData(data);
+      if (!englishMeaning) {
+        throw new Error("未查询到明确释义");
+      }
+
+      const translatedMeaning = trimMeaningText(await translateTextToChinese(englishMeaning));
+      if (isUsefulMeaning(translatedMeaning, cleaned)) {
+        return translatedMeaning;
       }
 
       throw new Error("未查询到简短释义");
@@ -1953,7 +1980,7 @@
         normalizeDailyReview({ date: "2026-03-30", remainingShows: 4, totalShows: 5 }).remainingShows === 4,
         "daily review normalization should keep valid counters"
       );
-      console.assert(trimMeaningText("v.ç§ä¸‹å’Œè§£ ,å¤åˆ ,ç§äº†") === "ç§ä¸‹å’Œè§£ / å¤åˆ", "meaning trimming should keep concise translations");
+      console.assert(trimMeaningText("v.私下和解 ,复合 ,私了") === "私下和解 / 复合", "meaning trimming should keep concise translations");
       console.assert(
         normalizeActivity({ checkinDates: ["2026-03-30", "2026-03-30", "bad"] }).checkinDates.length === 1,
         "activity normalization should deduplicate valid dates"
@@ -1973,7 +2000,7 @@
               : DEFAULT_INTERVALS.slice(),
         };
         state.backendReady = true;
-        state.syncStatus = "äº‘ç«¯æ•°æ®åº“å·²è¿žæŽ¥";
+        state.syncStatus = "云端数据库已连接";
         state.syncError = "";
         persistLocalBackup();
       } catch (error) {
@@ -1991,8 +2018,8 @@
               : DEFAULT_INTERVALS.slice(),
         };
         state.backendReady = false;
-        state.syncStatus = "æœªè¿žæŽ¥æœåŠ¡å™¨ï¼Œå½“å‰ä½¿ç”¨æœ¬åœ°æ•°æ®";
-        state.syncError = "é¡µé¢æœªè¿žæŽ¥åˆ°åŽç«¯æœåŠ¡ã€‚éƒ¨ç½²åˆ°äº‘æœåŠ¡å™¨åŽï¼Œè¿™é‡Œä¼šè‡ªåŠ¨åˆ‡æ¢åˆ°äº‘ç«¯å­˜å‚¨ã€‚";
+        state.syncStatus = "未连接服务器，当前使用本地数据";
+        state.syncError = "页面未连接到后端服务。部署到云服务器后，这里会自动切换到云端存储。";
       }
     }
 
@@ -2027,7 +2054,7 @@
     }
 
     function formatCalendarTitle(date) {
-      return `${date.getFullYear()} å¹´ ${String(date.getMonth() + 1).padStart(2, "0")} æœˆ`;
+      return `${date.getFullYear()} 年 ${String(date.getMonth() + 1).padStart(2, "0")} 月`;
     }
 
     function getCalendarDays(offset = 0) {
@@ -2476,9 +2503,9 @@
 
       try {
         const meaning = await fetchMeaning(word);
-        state.form.meaning = meaning || "æœªæŸ¥è¯¢åˆ°ä¸­æ–‡é‡Šä¹‰";
+        state.form.meaning = meaning || "未查询到中文释义";
       } catch {
-        state.fetchError = "è‡ªåŠ¨èŽ·å–ç®€çŸ­é‡Šä¹‰å¤±è´¥ï¼Œä½ ä»ç„¶å¯ä»¥æ‰‹åŠ¨ä¿®æ”¹è¯ä¹‰åŽå†ä¿å­˜ã€‚";
+        state.fetchError = "自动获取简短释义失败，你仍然可以手动修改词义后再保存。";
       } finally {
         state.isFetchingMeaning = false;
         syncFormUI();
@@ -2488,7 +2515,6 @@
     async function addWord() {
       const cleanedWord = state.form.word.trim();
       if (!cleanedWord) return;
-      const addedAt = parseAddedAtInput(state.form.addedAt);
 
       let finalMeaning = state.form.meaning.trim();
 
@@ -2499,7 +2525,7 @@
         try {
           finalMeaning = await fetchMeaning(cleanedWord);
         } catch {
-          state.fetchError = "è‡ªåŠ¨èŽ·å–ç®€çŸ­é‡Šä¹‰å¤±è´¥ï¼Œå·²ä¿å­˜å•è¯ï¼›ä½ ä¹‹åŽä»å¯ä»¥æ‰‹åŠ¨è¡¥å……è¯ä¹‰ã€‚";
+          state.fetchError = "自动获取简短释义失败，已保存单词；你之后仍可以手动补充词义。";
         } finally {
           state.isFetchingMeaning = false;
           syncFormUI();
@@ -2511,8 +2537,8 @@
         word: cleanedWord,
         meaning: finalMeaning || "",
         note: state.form.note.trim(),
-        learnedDate: formatDateCN(addedAt),
-        createdAt: addedAt.toISOString(),
+        learnedDate: todayDate(),
+        createdAt: new Date().toISOString(),
         intervals: state.settings.intervals.slice(),
         completedReviews: [],
         reinforcementRounds: [],
@@ -2520,14 +2546,14 @@
       });
 
       state.words.unshift(item);
-      state.form = { word: "", meaning: "", note: "", addedAt: getDefaultAddedAtInputValue() };
+      state.form = { word: "", meaning: "", note: "" };
       showAddToast(item);
       void persist();
       render();
     }
 
     function showAddSuccess(word) {
-      state.addSuccessMessage = `${word.word}: ${word.meaning || "æš‚æ— é‡Šä¹‰"}`;
+      state.addSuccessMessage = `${word.word}: ${word.meaning || "暂无释义"}`;
       syncFormUI();
       if (addSuccessTimer) clearTimeout(addSuccessTimer);
       addSuccessTimer = setTimeout(() => {
@@ -2537,7 +2563,7 @@
     }
 
     function showAddToast(word) {
-      state.addSuccessMessage = `${word.word} Â· ${word.meaning || "æš‚æ— é‡Šä¹‰"}`;
+      state.addSuccessMessage = `${word.word} · ${word.meaning || "暂无释义"}`;
       syncFormUI();
       if (addSuccessTimer) clearTimeout(addSuccessTimer);
       addSuccessTimer = setTimeout(() => {
@@ -2575,7 +2601,7 @@
           void persist();
           render();
         } catch {
-          alert("å¯¼å…¥å¤±è´¥ï¼šæ–‡ä»¶æ ¼å¼ä¸æ­£ç¡®");
+          alert("导入失败：文件格式不正确");
         }
       };
       reader.readAsText(file, "utf-8");
@@ -2583,7 +2609,7 @@
 
     function applyIntervalsByPrompt() {
       const current = state.settings.intervals.join(",");
-      const input = window.prompt("è¯·è¾“å…¥å¤ä¹ é—´éš”ï¼Œç”¨è‹±æ–‡é€—å·åˆ†éš”ï¼Œä¾‹å¦‚ï¼š0,1,2,4,7,15,30", current);
+      const input = window.prompt("请输入复习间隔，用英文逗号分隔，例如：0,1,2,4,7,15,30", current);
       if (input == null) return;
 
       const values = input
@@ -2592,7 +2618,7 @@
         .filter((value) => Number.isFinite(value) && value >= 0);
 
       if (values.length === 0) {
-        alert("è¯·è¾“å…¥æœ‰æ•ˆçš„é—´éš”å¤©æ•°ï¼Œä¾‹å¦‚ï¼š0,1,2,4,7,15,30");
+        alert("请输入有效的间隔天数，例如：0,1,2,4,7,15,30");
         return;
       }
 
@@ -2627,9 +2653,8 @@
       document.getElementById("input-word").value = state.form.word;
       document.getElementById("input-meaning").value = state.form.meaning;
       document.getElementById("input-note").value = state.form.note;
-      document.getElementById("input-added-at").value = state.form.addedAt;
       document.getElementById("btn-lookup").disabled = state.isFetchingMeaning || !state.form.word.trim();
-      document.getElementById("btn-lookup").textContent = state.isFetchingMeaning ? "æŸ¥è¯¢ä¸­" : "èŽ·å–ç®€çŸ­é‡Šä¹‰";
+      document.getElementById("btn-lookup").textContent = state.isFetchingMeaning ? "查询中" : "获取简短释义";
       document.getElementById("btn-add-word").disabled = !state.form.word.trim();
       const errorEl = document.getElementById("fetch-error");
       errorEl.textContent = [state.fetchError, state.syncError].filter(Boolean).join(" ");
@@ -2653,11 +2678,11 @@
       const calendarDays = getCalendarDays(state.checkinCalendarOffset);
       const today = todayDate();
 
-      statusEl.textContent = stats.checkedInToday ? "ä»Šæ—¥å·²ç­¾åˆ°" : "ä»Šæ—¥å¾…ç­¾åˆ°";
-      streakEl.textContent = `${stats.streak} å¤©`;
-      totalEl.textContent = `${stats.total} å¤©`;
+      statusEl.textContent = stats.checkedInToday ? "今日已签到" : "今日待签到";
+      streakEl.textContent = `${stats.streak} 天`;
+      totalEl.textContent = `${stats.total} 天`;
       buttonEl.disabled = stats.checkedInToday;
-      buttonEl.textContent = stats.checkedInToday ? "ä»Šæ—¥å·²ç­¾åˆ°" : "ä»Šæ—¥ç­¾åˆ°";
+      buttonEl.textContent = stats.checkedInToday ? "今日已签到" : "今日签到";
       titleEl.textContent = formatCalendarTitle(monthDate);
       weekdaysEl.innerHTML = WEEKDAY_LABELS.map((item) => `<div class="checkin-weekday">${item}</div>`).join("");
 
@@ -2668,7 +2693,7 @@
           return `
             <div class="checkin-day ${checked ? "on" : "off"} ${isToday ? "today" : ""} ${item.inCurrentMonth ? "" : "other-month"}">
               <strong>${item.day}</strong>
-              <span>${checked ? "å·²ç­¾" : "æœªç­¾"}</span>
+              <span>${checked ? "已签" : "未签"}</span>
             </div>
           `;
         })
@@ -2679,21 +2704,19 @@
       const stats = getStats();
       const checkinStats = getCheckinStats();
 
-      const addedAt = parseAddedAtInput(state.form.addedAt);
-      document.getElementById("today-record-date").textContent =
-        `当前加入时间：${formatDateTimeCN(addedAt)}（可手动修改）`;
+      document.getElementById("today-record-date").textContent = `记录日期：${todayDate()}（自动按北京时间获取）`;
       const userEl = document.getElementById("auth-username");
       if (userEl) {
-        userEl.textContent = state.currentUser?.username || "æœªç™»å½•";
+        userEl.textContent = state.currentUser?.username || "未登录";
       }
 
       document.getElementById("stat-total-words").textContent = String(stats.totalWords);
       document.getElementById("stat-today-learned").textContent = String(stats.todayLearned);
       document.getElementById("stat-due-words").textContent = String(stats.dueWords);
       document.getElementById("calendar-entry-title").textContent =
-        `${todayDate()} Â· ${checkinStats.checkedInToday ? "ä»Šæ—¥å·²ç­¾åˆ°" : "åŽ»ç­¾åˆ°"}`;
+        `${todayDate()} · ${checkinStats.checkedInToday ? "今日已签到" : "去签到"}`;
       document.getElementById("calendar-entry-desc").textContent =
-        `è¿žç»­ç­¾åˆ° ${checkinStats.streak} å¤©ï¼Œç´¯è®¡ç­¾åˆ° ${checkinStats.total} å¤©ã€‚ç‚¹å‡»è¿›å…¥æ—¥åŽ†ç•Œé¢ã€‚`;
+        `连续签到 ${checkinStats.streak} 天，累计签到 ${checkinStats.total} 天。点击进入日历界面。`;
       renderCheckinPanel();
     }
 
@@ -2708,21 +2731,21 @@
         <div class="focus-entry">
           <div class="focus-copy">
             <div class="focus-kicker">Focus Review</div>
-            <h2 class="section-title" style="margin-bottom:8px;">é€è¯å¤ä¹ æ¨¡å¼</h2>
+            <h2 class="section-title" style="margin-bottom:8px;">逐词复习模式</h2>
             <div class="desc">
-              æ¯ä¸ªéœ€è¦å¤ä¹ çš„å•è¯ä»Šå¤©é»˜è®¤å±•ç¤º 2 æ¬¡ã€‚ç¬¬ä¸€æ¬¡ç‚¹â€œè®¤è¯†â€ä¼šå›žåˆ°é˜Ÿå°¾ï¼Œç¬¬äºŒæ¬¡å†ç‚¹â€œè®¤è¯†â€æ‰ç®—ä»Šå¤©å®Œæˆï¼›å¦‚æžœä»»æ„ä¸€æ¬¡ç‚¹â€œä¸è®¤è¯†â€ï¼Œè¿™ä¸ªå•è¯ä»Šå¤©è¿˜éœ€è¦é¢å¤–å†å±•ç¤º 3 æ¬¡ã€‚
+              每个需要复习的单词今天默认展示 2 次。第一次点“认识”会回到队尾，第二次再点“认识”才算今天完成；如果任意一次点“不认识”，这个单词今天还需要额外再展示 3 次。
             </div>
           </div>
           <div class="focus-brief">
-            <div class="focus-brief-title">ä»Šæ—¥è¡ŒåŠ¨æ‘˜è¦</div>
+            <div class="focus-brief-title">今日行动摘要</div>
             <div class="focus-rule-list">
-              <div class="focus-rule">å¾…è¿‡ä¸€éçš„å•è¯ï¼š${dueToday.length} ä¸ª</div>
-              <div class="focus-rule">é”™è¿‡çš„åŽ†å²è½®æ¬¡ï¼š${backlog.missedUnits} æ¬¡</div>
-              <div class="focus-rule">å»ºè®®å…ˆè¿›å…¥ä¸“æ³¨æ¨¡å¼ï¼ŒæŠŠä»Šå¤©çš„é˜Ÿåˆ—å®Œæ•´èµ°å®Œã€‚</div>
+              <div class="focus-rule">待过一遍的单词：${dueToday.length} 个</div>
+              <div class="focus-rule">错过的历史轮次：${backlog.missedUnits} 次</div>
+              <div class="focus-rule">建议先进入专注模式，把今天的队列完整走完。</div>
             </div>
             <div class="focus-actions">
-              <button class="btn" id="btn-start-session" ${dueToday.length ? "" : "disabled"}>å¼€å§‹ä¸“æ³¨å¤ä¹ </button>
-              <button class="btn btn-outline" id="btn-reset-session" ${dueToday.length ? "" : "disabled"}>é‡æ–°ç”Ÿæˆé˜Ÿåˆ—</button>
+              <button class="btn" id="btn-start-session" ${dueToday.length ? "" : "disabled"}>开始专注复习</button>
+              <button class="btn btn-outline" id="btn-reset-session" ${dueToday.length ? "" : "disabled"}>重新生成队列</button>
             </div>
           </div>
         </div>
@@ -2730,12 +2753,12 @@
           backlog.missedUnits > 0
             ? `<div class="review-backlog">${
                 backlog.gapDays > 0
-                  ? `ä½ è·ç¦»ä¸Šæ¬¡ä¸Šçº¿å·²ç» ${backlog.gapDays} å¤©ï¼Œä»Šå¤©ä¼šè¡¥å¤ä¹  ${backlog.missedWords} ä¸ªå•è¯çš„ ${backlog.missedUnits} ä¸ªæ¼æŽ‰è½®æ¬¡ã€‚`
-                  : `ä»Šå¤©æœ‰ ${backlog.missedWords} ä¸ªå•è¯ã€å…± ${backlog.missedUnits} ä¸ªè½®æ¬¡æ¥è‡ªä¹‹å‰é”™è¿‡çš„å¤ä¹ æ—¥æœŸã€‚`
+                  ? `你距离上次上线已经 ${backlog.gapDays} 天，今天会补复习 ${backlog.missedWords} 个单词的 ${backlog.missedUnits} 个漏掉轮次。`
+                  : `今天有 ${backlog.missedWords} 个单词、共 ${backlog.missedUnits} 个轮次来自之前错过的复习日期。`
               }</div>`
             : ""
         }
-        <div class="muted">å½“å‰å…±æœ‰ ${dueToday.length} ä¸ªå¾…å¤ä¹ å•è¯ï¼Œè¿›å…¥åŽä¼šæŒ‰é˜Ÿåˆ—é€ä¸ªå±•ç¤ºã€‚</div>
+        <div class="muted">当前共有 ${dueToday.length} 个待复习单词，进入后会按队列逐个展示。</div>
       `;
 
       if (!dueToday.length) {
@@ -2754,7 +2777,7 @@
         const dueStepsHtml = word.dueUnits
           .map((unit) => `
             <div class="pill">
-              ${escapeHtml(unit.label)}ï¼ˆåº”å¤ä¹ æ—¥æœŸï¼š${escapeHtml(unit.reviewDate)}ï¼‰
+              ${escapeHtml(unit.label)}（应复习日期：${escapeHtml(unit.reviewDate)}）
             </div>
           `)
           .join("");
@@ -2766,39 +2789,39 @@
             <div class="due-main">
               <div class="due-top">
                 <div class="due-word">${escapeHtml(word.word)}</div>
-                ${word.lapseCount > 0 ? `<span class="warn-badge ${lapseMeta.badgeClass}">é—å¿˜ ${word.lapseCount} æ¬¡</span>` : ""}
+                ${word.lapseCount > 0 ? `<span class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${word.lapseCount} 次</span>` : ""}
               </div>
 
               <div class="review-panel">
-                <div class="muted">å…ˆçœ‹å•è¯ï¼Œè‡ªå·±å›žæƒ³è¯ä¹‰</div>
+                <div class="muted">先看单词，自己回想词义</div>
                 ${
                   !revealed
                     ? `
                       <div class="review-actions">
-                        <button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">æ˜¾ç¤ºé‡Šä¹‰</button>
+                        <button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">显示释义</button>
                       </div>
                     `
                     : `
                       <div style="margin-top:12px;">
-                        <div class="meaning">${word.meaning ? escapeHtml(word.meaning) : "æš‚æ— é‡Šä¹‰"}</div>
+                        <div class="meaning">${word.meaning ? escapeHtml(word.meaning) : "暂无释义"}</div>
                         ${word.note ? `<div class="muted" style="margin-top:10px;">${escapeHtml(word.note)}</div>` : ""}
                         <div class="review-actions">
-                          <button class="btn" onclick="window.__app.markWordKnown('${word.id}')">è®¤è¯†</button>
-                          <button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">ä¸è®¤è¯†</button>
+                          <button class="btn" onclick="window.__app.markWordKnown('${word.id}')">认识</button>
+                          <button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">不认识</button>
                         </div>
                       </div>
                     `
                 }
               </div>
 
-              <div class="muted">å­¦ä¹ æ—¥æœŸï¼š${escapeHtml(word.learnedDate)}</div>
-              ${nextPending ? `<div class="muted" style="margin-top:6px;">å½“å‰ä¼˜å…ˆå¤ä¹ ï¼š${escapeHtml(nextPending.label)}ï¼ˆ${escapeHtml(nextPending.reviewDate)}ï¼‰</div>` : ""}
-              <div class="muted" style="margin-top:6px;">ä»Šå¤©è¿˜éœ€å±•ç¤ºï¼š${remainingShows} æ¬¡</div>
+              <div class="muted">学习日期：${escapeHtml(word.learnedDate)}</div>
+              ${nextPending ? `<div class="muted" style="margin-top:6px;">当前优先复习：${escapeHtml(nextPending.label)}（${escapeHtml(nextPending.reviewDate)}）</div>` : ""}
+              <div class="muted" style="margin-top:6px;">今天还需展示：${remainingShows} 次</div>
               <div class="pill-list" style="margin-top:12px;">${dueStepsHtml}</div>
             </div>
 
             <div class="due-side">
-              <button class="btn" style="width:100%;" onclick="window.__app.markAllDueDone('${word.id}')">ä¸€é”®å®Œæˆæœ¬è¯ä»Šæ—¥å…¨éƒ¨å¤ä¹ </button>
+              <button class="btn" style="width:100%;" onclick="window.__app.markAllDueDone('${word.id}')">一键完成本词今日全部复习</button>
             </div>
           </div>
         `;
@@ -2815,11 +2838,11 @@
         panelEl.innerHTML = `
           <div class="empty">
             <div class="empty-copy">
-              <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">ä»Šæ—¥ä¸“æ³¨å¤ä¹ å·²å®Œæˆ</div>
-              <div>å½“å‰é˜Ÿåˆ—é‡Œå·²ç»æ²¡æœ‰å¾…å¤„ç†çš„å•è¯äº†ã€‚ä½ å¯ä»¥å›žåˆ°â€œä»Šæ—¥å¤ä¹ â€æŸ¥çœ‹æ˜Žç»†ï¼Œæˆ–ç¨åŽå†å¼€å§‹æ–°ä¸€è½®ã€‚</div>
+              <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">今日专注复习已完成</div>
+              <div>当前队列里已经没有待处理的单词了。你可以回到“今日复习”查看明细，或稍后再开始新一轮。</div>
               <div class="focus-actions" style="justify-content:center; margin-top:18px;">
-                <button class="btn" id="btn-session-restart">é‡æ–°æ‰«æä»Šæ—¥é˜Ÿåˆ—</button>
-                <button class="btn btn-outline" id="btn-session-back">è¿”å›žä»Šæ—¥å¤ä¹ </button>
+                <button class="btn" id="btn-session-restart">重新扫描今日队列</button>
+                <button class="btn btn-outline" id="btn-session-back">返回今日复习</button>
               </div>
             </div>
           </div>
@@ -2835,12 +2858,12 @@
             <div class="session-top">
               <div>
                 <div class="focus-kicker">Daily Session</div>
-                <h2 class="section-title" style="margin-bottom:8px;">ä¸“æ³¨å¤ä¹ </h2>
-                <div class="session-progress">å½“å‰é˜Ÿåˆ—è¿˜æœ‰ ${totalWords} ä¸ªå•è¯å¾…è¿‡ä¸€éï¼Œ${escapeHtml(current.word)} ä»Šå¤©è¿˜å‰© ${remainingShows} æ¬¡å¾…å±•ç¤ºã€‚</div>
+                <h2 class="section-title" style="margin-bottom:8px;">专注复习</h2>
+                <div class="session-progress">当前队列还有 ${totalWords} 个单词待过一遍，${escapeHtml(current.word)} 今天还剩 ${remainingShows} 次待展示。</div>
               </div>
               <div class="focus-actions">
-                <div class="session-badge">å­¦ä¹ æ—¥æœŸï¼š${escapeHtml(current.learnedDate)}</div>
-                ${current.lapseCount > 0 ? `<div class="warn-badge ${lapseMeta.badgeClass}">é—å¿˜ ${current.lapseCount} æ¬¡</div>` : ""}
+                <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
+                ${current.lapseCount > 0 ? `<div class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${current.lapseCount} 次</div>` : ""}
               </div>
             </div>
 
@@ -2849,18 +2872,18 @@
               ${
                 !state.reviewSession.revealed
                   ? `
-                    <div class="session-tip">å…ˆçœ‹å•è¯ï¼Œè‡ªå·±å›žæƒ³è¯ä¹‰ã€‚å‡†å¤‡å¥½åŽå†å±•å¼€ç­”æ¡ˆã€‚</div>
+                    <div class="session-tip">先看单词，自己回想词义。准备好后再展开答案。</div>
                     <div class="session-actions">
-                      <button class="btn" id="btn-session-reveal">æ˜¾ç¤ºé‡Šä¹‰</button>
+                      <button class="btn" id="btn-session-reveal">显示释义</button>
                     </div>
                   `
                   : `
-                    <div class="session-meaning">${current.meaning ? escapeHtml(current.meaning) : "æš‚æ— é‡Šä¹‰"}</div>
+                    <div class="session-meaning">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
                     ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
-                    <div class="session-tip">ç‚¹â€œè®¤è¯†â€ä¼šæ¶ˆè€—ä»Šå¤© 1 æ¬¡å±•ç¤ºé¢åº¦ï¼›å¦‚æžœè¿™æ˜¯ç¬¬äºŒæ¬¡é¡ºåˆ©è®¤å‡ºï¼Œè¿™ä¸ªå•è¯ä»Šå¤©å°±å®Œæˆã€‚ç‚¹â€œä¸è®¤è¯†â€ä¼šåœ¨ä»Šå¤©å‰©ä½™å±•ç¤ºæ¬¡æ•°ä¸Šå†åŠ  3ã€‚</div>
+                    <div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>
                     <div class="session-actions">
-                      <button class="btn" id="btn-session-known">è®¤è¯†</button>
-                      <button class="btn btn-danger" id="btn-session-unknown">ä¸è®¤è¯†</button>
+                      <button class="btn" id="btn-session-known">认识</button>
+                      <button class="btn btn-danger" id="btn-session-unknown">不认识</button>
                     </div>
                   `
               }
@@ -2869,12 +2892,12 @@
 
           <div class="session-footer">
               <div class="session-meta">
-                å½“å‰ä¼˜å…ˆå¤ä¹ ï¼š${escapeHtml(current.nextPending?.label || "å·²å®Œæˆ")}<br />
-              ä»Šæ—¥å…³è”è®¡åˆ’ï¼š${escapeHtml(current.dueUnits.map((unit) => unit.label).join("ã€"))}
+                当前优先复习：${escapeHtml(current.nextPending?.label || "已完成")}<br />
+              今日关联计划：${escapeHtml(current.dueUnits.map((unit) => unit.label).join("、"))}
             </div>
             <div class="focus-actions">
-              <button class="btn btn-outline" id="btn-session-rescan">é‡æ–°ç”Ÿæˆé˜Ÿåˆ—</button>
-              <button class="btn btn-outline" id="btn-session-exit">è¿”å›žä»Šæ—¥å¤ä¹ </button>
+              <button class="btn btn-outline" id="btn-session-rescan">重新生成队列</button>
+              <button class="btn btn-outline" id="btn-session-exit">返回今日复习</button>
             </div>
           </div>
         </div>
@@ -2921,11 +2944,11 @@
           .map((item) => {
             const due = item.reviewDate <= today && !item.done;
             const statusClass = item.done ? "done" : due ? "due" : "future";
-            const statusText = item.done ? "å·²å®Œæˆ" : due ? "å¾…å¤ä¹ " : "æœªåˆ°æœŸ";
+            const statusText = item.done ? "已完成" : due ? "待复习" : "未到期";
 
             return `
               <div class="plan-item">
-                <span>${escapeHtml(item.label)} Â· ç¬¬ ${item.offset} å¤© Â· ${escapeHtml(item.reviewDate)}</span>
+                <span>${escapeHtml(item.label)} · 第 ${item.offset} 天 · ${escapeHtml(item.reviewDate)}</span>
                 <span class="status ${statusClass}">${statusText}</span>
               </div>
             `;
@@ -2939,32 +2962,32 @@
             <div>
               <div class="word-title">${escapeHtml(word.word)}</div>
               <div class="word-meta" style="margin-top:6px;">
-                å­¦ä¹ æ—¥æœŸï¼š${escapeHtml(word.learnedDate)}${word.meaning ? ` Â· ${escapeHtml(word.meaning)}` : ""}
+                学习日期：${escapeHtml(word.learnedDate)}${word.meaning ? ` · ${escapeHtml(word.meaning)}` : ""}
               </div>
             </div>
             <div class="icon-btns">
-              <button class="icon-btn" title="é‡ç½®è¿›åº¦" onclick="window.__app.resetProgress('${word.id}')">é‡ç½®</button>
-              <button class="icon-btn" title="åˆ é™¤å•è¯" onclick="window.__app.deleteWord('${word.id}')">åˆ é™¤</button>
+              <button class="icon-btn" title="重置进度" onclick="window.__app.resetProgress('${word.id}')">重置</button>
+              <button class="icon-btn" title="删除单词" onclick="window.__app.deleteWord('${word.id}')">删除</button>
             </div>
           </div>
 
           ${word.note ? `<div class="word-note">${escapeHtml(word.note)}</div>` : ""}
-          ${word.lapseCount > 0 ? `<div class="lapse-text ${lapseMeta.textClass}">é—å¿˜æ¬¡æ•°ï¼š${word.lapseCount}</div>` : ""}
+          ${word.lapseCount > 0 ? `<div class="lapse-text ${lapseMeta.textClass}">遗忘次数：${word.lapseCount}</div>` : ""}
 
           <div class="progress-wrap">
             <div class="progress-row">
-              <span>å¤ä¹ è¿›åº¦</span>
+              <span>复习进度</span>
               <span>${progress.done}/${progress.total}</span>
             </div>
             <div class="progress"><div class="progress-bar" style="width:${progress.percent}%;"></div></div>
           </div>
 
           <div class="plan-box" style="margin-top:14px;">
-            <div style="font-size:14px; font-weight:700;">å¤ä¹ è®¡åˆ’</div>
+            <div style="font-size:14px; font-weight:700;">复习计划</div>
             ${planHtml}
           </div>
 
-          ${dueUnits.length > 0 ? `<div class="footer-due" style="margin-top:14px;">å½“å‰å¾…å¤ä¹ ï¼š${escapeHtml(dueUnits.map((s) => s.label).join("ã€"))}</div>` : ""}
+          ${dueUnits.length > 0 ? `<div class="footer-due" style="margin-top:14px;">当前待复习：${escapeHtml(dueUnits.map((s) => s.label).join("、"))}</div>` : ""}
         `;
         cardsEl.appendChild(card);
       }
@@ -3071,11 +3094,6 @@
         state.form.note = e.target.value;
       });
 
-      document.getElementById("input-added-at").addEventListener("input", (e) => {
-        state.form.addedAt = e.target.value;
-        renderTop();
-      });
-
       document.getElementById("input-search").addEventListener("input", (e) => {
         state.query = e.target.value;
         renderAllWords();
@@ -3117,7 +3135,6 @@
 
     async function init() {
       runSelfChecks();
-      state.form.addedAt = getDefaultAddedAtInputValue();
       const loggedIn = await loadCurrentUser();
       if (!loggedIn) return;
       await loadState();
@@ -3147,4 +3164,3 @@
   </script>
 </body>
 </html>
-

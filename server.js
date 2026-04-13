@@ -1,4 +1,4 @@
-﻿const crypto = require("node:crypto");
+const crypto = require("node:crypto");
 const fsSync = require("node:fs");
 const fs = require("node:fs/promises");
 const path = require("node:path");
@@ -33,11 +33,7 @@ const DATABASE_URL = process.env.DATABASE_URL || "";
 const DATA_DIR = path.join(__dirname, ".local-data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const STATES_FILE = path.join(DATA_DIR, "states.json");
-const MS_TRANSLATOR_API_BASE = String(
-  process.env.MS_TRANSLATOR_API_BASE || "https://api.cognitive.microsofttranslator.com"
-).replace(/\/+$/, "");
-const MS_TRANSLATOR_KEY = process.env.MS_TRANSLATOR_KEY || "";
-const MS_TRANSLATOR_REGION = process.env.MS_TRANSLATOR_REGION || "";
+const MYMEMORY_API_URL = "https://api.mymemory.translated.net/get";
 
 function nowIso() {
   return new Date().toISOString();
@@ -160,41 +156,23 @@ function sanitizeState(input) {
   };
 }
 
-async function lookupMeaningWithMicrosoftTranslator(word) {
+async function lookupMeaningWithMyMemory(word) {
   const q = String(word || "").trim();
   if (!q) {
     throw new Error("empty_word");
   }
 
-  if (!MS_TRANSLATOR_KEY) {
-    throw new Error("translator_not_configured");
-  }
-
-  const headers = {
-    "Content-Type": "application/json",
-    "Ocp-Apim-Subscription-Key": MS_TRANSLATOR_KEY,
-  };
-  if (MS_TRANSLATOR_REGION) {
-    headers["Ocp-Apim-Subscription-Region"] = MS_TRANSLATOR_REGION;
-  }
-
-  const url = `${MS_TRANSLATOR_API_BASE}/translate?api-version=3.0&from=en&to=zh-Hans`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify([{ text: q }]),
-  });
+  const url =
+    `${MYMEMORY_API_URL}?q=${encodeURIComponent(q)}&langpair=${encodeURIComponent("en|zh-CN")}`;
+  const response = await fetch(url);
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("translator_auth_failed");
-    }
-    throw new Error("translator_request_failed");
+    throw new Error("mymemory_request_failed");
   }
 
   const data = await response.json();
-  const translation = typeof data?.[0]?.translations?.[0]?.text === "string"
-    ? data[0].translations[0].text
+  const translation = typeof data?.responseData?.translatedText === "string"
+    ? data.responseData.translatedText
     : "";
 
   return String(translation || "").trim();
@@ -427,11 +405,11 @@ async function main() {
     const password = String(req.body?.password || "");
 
     if (!validateUsername(username)) {
-      return res.status(400).json({ error: "ç”¨æˆ·åéœ€ä¸º 3-32 ä½ï¼Œåªèƒ½åŒ…å«å­—æ¯ã€æ•°å­—ã€ä¸‹åˆ’çº¿æˆ–è¿žå­—ç¬¦ã€‚" });
+      return res.status(400).json({ error: "用户名需为 3-32 位，只能包含字母、数字、下划线或连字符。" });
     }
 
     if (!validatePassword(password)) {
-      return res.status(400).json({ error: "å¯†ç é•¿åº¦éœ€åœ¨ 8-72 ä½ä¹‹é—´ã€‚" });
+      return res.status(400).json({ error: "密码长度需在 8-72 位之间。" });
     }
 
     const user = await store.createUser({
@@ -441,7 +419,7 @@ async function main() {
     });
 
     if (!user) {
-      return res.status(409).json({ error: "è¯¥ç”¨æˆ·åå·²å­˜åœ¨ã€‚" });
+      return res.status(409).json({ error: "该用户名已存在。" });
     }
 
     const token = createToken(user);
@@ -454,7 +432,7 @@ async function main() {
 
     const user = await store.findUserByUsername(username);
     if (!user || !verifyPassword(password, user.passwordHash)) {
-      return res.status(401).json({ error: "ç”¨æˆ·åæˆ–å¯†ç é”™è¯¯ã€‚" });
+      return res.status(401).json({ error: "用户名或密码错误。" });
     }
 
     const token = createToken(user);
@@ -506,23 +484,17 @@ async function main() {
     }
 
     try {
-      const meaning = await lookupMeaningWithMicrosoftTranslator(word);
+      const meaning = await lookupMeaningWithMyMemory(word);
       if (!meaning) {
         return res.status(404).json({ error: "未查询到简短释义。" });
       }
-      res.json({ meaning, provider: "microsoft-translator" });
+      res.json({ meaning, provider: "mymemory" });
     } catch (error) {
+      if (error.message === "mymemory_request_failed") {
+        return res.status(502).json({ error: "MyMemory 接口调用失败。" });
+      }
       if (error.message === "empty_word") {
         return res.status(400).json({ error: "请输入要查询的单词。" });
-      }
-      if (error.message === "translator_not_configured") {
-        return res.status(503).json({ error: "翻译服务未配置，请联系管理员配置 MS_TRANSLATOR_KEY。" });
-      }
-      if (error.message === "translator_auth_failed") {
-        return res.status(502).json({ error: "Microsoft Translator 鉴权失败，请检查 Key/Region 配置。" });
-      }
-      if (error.message === "translator_request_failed") {
-        return res.status(502).json({ error: "Microsoft Translator 调用失败，请稍后重试。" });
       }
       throw error;
     }
@@ -547,11 +519,6 @@ async function main() {
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
     console.log(`Storage mode: ${mode}`);
-    if (MS_TRANSLATOR_KEY) {
-      console.log("Meaning lookup provider: Microsoft Translator");
-    } else {
-      console.warn("Meaning lookup provider not configured. Set MS_TRANSLATOR_KEY to enable Chinese translation.");
-    }
     if (!DATABASE_URL) {
       console.log("Using local JSON storage. Set DATABASE_URL to enable cloud PostgreSQL.");
     }
@@ -562,4 +529,3 @@ main().catch((error) => {
   console.error("Failed to start server:", error);
   process.exit(1);
 });
-

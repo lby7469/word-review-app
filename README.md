@@ -62,15 +62,3 @@ DATABASE_URL=postgresql://username:password@host:5432/database_name
 - `PUT /api/state`
 
 只是现在接口会根据当前登录用户读取和保存。
-
-## Translation Provider
-
-Meaning lookup now uses the official Microsoft Translator API through backend route `POST /api/lookup/meaning`.
-
-Set these environment variables in `.env`:
-
-```env
-MS_TRANSLATOR_KEY=your_microsoft_translator_key
-MS_TRANSLATOR_REGION=your_translator_resource_region
-MS_TRANSLATOR_API_BASE=https://api.cognitive.microsofttranslator.com
-```

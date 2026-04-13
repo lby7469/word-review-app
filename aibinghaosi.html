@@ -1419,6 +1419,11 @@
 
           <div>
             <div class="field">
+              <label for="input-learned-date">加入日期</label>
+              <input id="input-learned-date" class="input" type="date" />
+            </div>
+
+            <div class="field">
               <label for="input-note">备注</label>
               <textarea id="input-note" class="textarea" placeholder="例句、词根词缀、易错点都可以记在这里"></textarea>
             </div>
@@ -1506,6 +1511,7 @@
         word: "",
         meaning: "",
         note: "",
+        learnedDate: "",
       },
       lastActiveSnapshot: "",
       revealState: {}
@@ -1534,6 +1540,14 @@
         second: "2-digit",
         hour12: false,
       }).format(date);
+    }
+
+    function normalizeSelectedLearnedDate(value) {
+      return isDateString(value) ? value : todayDate();
+    }
+
+    function learnedDateToIsoString(dateStr) {
+      return new Date(`${dateStr}T00:00:00+08:00`).toISOString();
     }
 
     function addDays(dateStr, days) {
@@ -2515,6 +2529,7 @@
     async function addWord() {
       const cleanedWord = state.form.word.trim();
       if (!cleanedWord) return;
+      const learnedDate = normalizeSelectedLearnedDate(state.form.learnedDate);
 
       let finalMeaning = state.form.meaning.trim();
 
@@ -2537,8 +2552,8 @@
         word: cleanedWord,
         meaning: finalMeaning || "",
         note: state.form.note.trim(),
-        learnedDate: todayDate(),
-        createdAt: new Date().toISOString(),
+        learnedDate,
+        createdAt: learnedDateToIsoString(learnedDate),
         intervals: state.settings.intervals.slice(),
         completedReviews: [],
         reinforcementRounds: [],
@@ -2546,7 +2561,7 @@
       });
 
       state.words.unshift(item);
-      state.form = { word: "", meaning: "", note: "" };
+      state.form = { word: "", meaning: "", note: "", learnedDate: todayDate() };
       showAddToast(item);
       void persist();
       render();
@@ -2653,6 +2668,7 @@
       document.getElementById("input-word").value = state.form.word;
       document.getElementById("input-meaning").value = state.form.meaning;
       document.getElementById("input-note").value = state.form.note;
+      document.getElementById("input-learned-date").value = state.form.learnedDate;
       document.getElementById("btn-lookup").disabled = state.isFetchingMeaning || !state.form.word.trim();
       document.getElementById("btn-lookup").textContent = state.isFetchingMeaning ? "查询中" : "获取简短释义";
       document.getElementById("btn-add-word").disabled = !state.form.word.trim();
@@ -2704,7 +2720,8 @@
       const stats = getStats();
       const checkinStats = getCheckinStats();
 
-      document.getElementById("today-record-date").textContent = `记录日期：${todayDate()}（自动按北京时间获取）`;
+      document.getElementById("today-record-date").textContent =
+        `记录日期：${normalizeSelectedLearnedDate(state.form.learnedDate)}（可手动选择）`;
       const userEl = document.getElementById("auth-username");
       if (userEl) {
         userEl.textContent = state.currentUser?.username || "未登录";
@@ -3094,6 +3111,11 @@
         state.form.note = e.target.value;
       });
 
+      document.getElementById("input-learned-date").addEventListener("input", (e) => {
+        state.form.learnedDate = normalizeSelectedLearnedDate(e.target.value);
+        renderTop();
+      });
+
       document.getElementById("input-search").addEventListener("input", (e) => {
         state.query = e.target.value;
         renderAllWords();
@@ -3135,6 +3157,7 @@
 
     async function init() {
       runSelfChecks();
+      state.form.learnedDate = todayDate();
       const loggedIn = await loadCurrentUser();
       if (!loggedIn) return;
       await loadState();

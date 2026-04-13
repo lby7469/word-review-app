@@ -2661,7 +2661,14 @@
       render();
     }
 
+    function focusAddWordInput() {
+      requestAnimationFrame(() => {
+        document.getElementById("input-word")?.focus();
+      });
+    }
+
     function setTab(tab) {
+      const previousTab = state.currentTab;
       state.currentTab = tab;
       document.querySelectorAll(".tab-btn").forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.tab === tab);
@@ -2671,6 +2678,9 @@
       document.getElementById("tab-calendar").classList.toggle("hidden", tab !== "calendar");
       document.getElementById("tab-add").classList.toggle("hidden", tab !== "add");
       document.getElementById("tab-all").classList.toggle("hidden", tab !== "all");
+      if (tab === "add" && previousTab !== "add") {
+        focusAddWordInput();
+      }
     }
 
     function escapeHtml(text) {

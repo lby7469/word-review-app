@@ -1455,6 +1455,9 @@
         </div>
 
         <div id="all-cards" class="cards-grid"></div>
+        <div id="all-load-more-wrap" class="hidden" style="margin-top:16px; text-align:center;">
+          <button id="btn-load-more-all" class="btn btn-outline" type="button">加载更多</button>
+        </div>
         <div id="all-empty" class="empty hidden" style="margin-top: 4px;">
           <div class="empty-copy">
             <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">还没有匹配的单词</div>
@@ -1485,6 +1488,7 @@
     const DEFAULT_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
     const REINFORCEMENT_INTERVALS = [0, 1, 2];
     const MAX_MEANING_LENGTH = 24;
+    const ALL_WORDS_PAGE_SIZE = 50;
     const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
     let addSuccessTimer = null;
 
@@ -1503,6 +1507,7 @@
       syncStatus: "正在验证登录状态",
       backendReady: false,
       currentUser: null,
+      allWordsVisibleCount: ALL_WORDS_PAGE_SIZE,
       reviewSession: {
         queue: [],
         revealed: false,
@@ -2768,7 +2773,6 @@
         `${todayDate()} · ${checkinStats.checkedInToday ? "今日已签到" : "去签到"}`;
       document.getElementById("calendar-entry-desc").textContent =
         `连续签到 ${checkinStats.streak} 天，累计签到 ${checkinStats.total} 天。点击进入日历界面。`;
-      renderCheckinPanel();
     }
 
     function renderToday() {
@@ -2958,18 +2962,24 @@
     function renderAllWords() {
       const today = todayDate();
       const words = getFilteredWords();
+      const visibleWords = words.slice(0, state.allWordsVisibleCount);
       const cardsEl = document.getElementById("all-cards");
       const emptyEl = document.getElementById("all-empty");
+      const loadMoreWrapEl = document.getElementById("all-load-more-wrap");
+      const loadMoreBtnEl = document.getElementById("btn-load-more-all");
       cardsEl.innerHTML = "";
 
       if (!words.length) {
         emptyEl.classList.remove("hidden");
+        loadMoreWrapEl.classList.add("hidden");
         return;
       }
 
       emptyEl.classList.add("hidden");
+      loadMoreWrapEl.classList.toggle("hidden", visibleWords.length >= words.length);
+      loadMoreBtnEl.textContent = `åŠ è½½æ›´å¤šï¼ˆ${visibleWords.length}/${words.length}ï¼‰`;
 
-      for (const word of words) {
+      for (const word of visibleWords) {
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
         const plan = [
           ...buildMainPlan(word.learnedDate, word.intervals || DEFAULT_INTERVALS).map((item) => ({
@@ -3045,13 +3055,29 @@
       }
     }
 
+    function renderCurrentTab() {
+      if (state.currentTab === "today") {
+        renderToday();
+        return;
+      }
+      if (state.currentTab === "session") {
+        renderSession();
+        return;
+      }
+      if (state.currentTab === "calendar") {
+        renderCheckinPanel();
+        return;
+      }
+      if (state.currentTab === "all") {
+        renderAllWords();
+      }
+    }
+
     function render() {
       renderTop();
       syncFormUI();
-      renderToday();
-      renderSession();
-      renderAllWords();
       setTab(state.currentTab);
+      renderCurrentTab();
     }
 
     function bindEvents() {
@@ -3062,6 +3088,7 @@
             return;
           }
           setTab(btn.dataset.tab);
+          renderCurrentTab();
         });
       });
 
@@ -3099,11 +3126,12 @@
       document.getElementById("btn-open-calendar").addEventListener("click", () => {
         state.checkinCalendarOffset = 0;
         setTab("calendar");
-        renderCheckinPanel();
+        renderCurrentTab();
       });
       document.getElementById("btn-checkin").addEventListener("click", checkInToday);
       document.getElementById("btn-calendar-back").addEventListener("click", () => {
         setTab("today");
+        renderCurrentTab();
       });
       document.getElementById("btn-checkin-prev").addEventListener("click", () => {
         state.checkinCalendarOffset -= 1;
@@ -3153,6 +3181,7 @@
 
       document.getElementById("input-search").addEventListener("input", (e) => {
         state.query = e.target.value;
+        state.allWordsVisibleCount = ALL_WORDS_PAGE_SIZE;
         renderAllWords();
       });
 
@@ -3162,6 +3191,12 @@
 
       document.getElementById("select-sort").addEventListener("change", (e) => {
         state.sortBy = e.target.value;
+        state.allWordsVisibleCount = ALL_WORDS_PAGE_SIZE;
+        renderAllWords();
+      });
+
+      document.getElementById("btn-load-more-all").addEventListener("click", () => {
+        state.allWordsVisibleCount += ALL_WORDS_PAGE_SIZE;
         renderAllWords();
       });
     }
@@ -3217,12 +3252,6 @@
       }
       bindEvents();
       render();
-      setInterval(() => {
-        renderTop();
-        renderToday();
-        renderSession();
-        renderAllWords();
-      }, 1000);
     }
 
     init();

@@ -3,6 +3,7 @@ const fsSync = require("node:fs");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 
+const compression = require("compression");
 const express = require("express");
 
 function loadEnvFile() {
@@ -413,26 +414,32 @@ function publicUser(user) {
   };
 }
 
+function sendHtmlFile(res, fileName) {
+  res.set("Cache-Control", "private, max-age=0, must-revalidate");
+  res.sendFile(path.join(__dirname, fileName));
+}
+
 async function main() {
   const { store, mode } = await createStore();
   const app = express();
 
+  app.use(compression());
   app.use(express.json({ limit: "2mb" }));
 
   app.get("/", (_req, res) => {
-    res.sendFile(path.join(__dirname, "login.html"));
+    sendHtmlFile(res, "login.html");
   });
 
   app.get("/login", (_req, res) => {
-    res.sendFile(path.join(__dirname, "login.html"));
+    sendHtmlFile(res, "login.html");
   });
 
   app.get("/app", (_req, res) => {
-    res.sendFile(path.join(__dirname, "aibinghaosi.html"));
+    sendHtmlFile(res, "aibinghaosi.html");
   });
 
   app.get("/app/review", (_req, res) => {
-    res.sendFile(path.join(__dirname, "aibinghaosi.html"));
+    sendHtmlFile(res, "aibinghaosi.html");
   });
 
   app.get("/aibinghaosi.html", (_req, res) => {

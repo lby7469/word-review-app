@@ -1865,16 +1865,10 @@
       const cleaned = word.trim();
       if (!cleaned) return "";
 
-      const response = await fetch(LOOKUP_MEANING_API_URL, {
+      const data = await apiRequest(LOOKUP_MEANING_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ word: cleaned }),
       });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data?.error || "简短释义获取失败");
-      }
 
       const meaning = trimMeaningText(data?.meaning || "");
       if (isUsefulMeaning(meaning, cleaned)) {

@@ -33,7 +33,9 @@ const DATABASE_URL = process.env.DATABASE_URL || "";
 const DATA_DIR = path.join(__dirname, ".local-data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const STATES_FILE = path.join(DATA_DIR, "states.json");
-const MYMEMORY_API_URL = "https://api.mymemory.translated.net/get";
+const YOUDAO_TRANSLATE_API_URL = "https://openapi.youdao.com/api";
+const YOUDAO_APP_KEY = process.env.YOUDAO_APP_KEY || "";
+const YOUDAO_APP_SECRET = process.env.YOUDAO_APP_SECRET || "";
 
 function nowIso() {
   return new Date().toISOString();
@@ -156,26 +158,67 @@ function sanitizeState(input) {
   };
 }
 
-async function lookupMeaningWithMyMemory(word) {
+function getYoudaoSignInput(value) {
+  const text = String(value || "");
+  return text.length <= 20 ? text : `${text.slice(0, 10)}${text.length}${text.slice(-10)}`;
+}
+
+async function lookupMeaningWithYoudao(word) {
   const q = String(word || "").trim();
   if (!q) {
     throw new Error("empty_word");
   }
+  if (!YOUDAO_APP_KEY || !YOUDAO_APP_SECRET) {
+    throw new Error("youdao_not_configured");
+  }
 
-  const url =
-    `${MYMEMORY_API_URL}?q=${encodeURIComponent(q)}&langpair=${encodeURIComponent("en|zh-CN")}`;
-  const response = await fetch(url);
+  const salt = crypto.randomUUID().replace(/-/g, "");
+  const curtime = String(Math.floor(Date.now() / 1000));
+  const sign = crypto
+    .createHash("sha256")
+    .update(`${YOUDAO_APP_KEY}${getYoudaoSignInput(q)}${salt}${curtime}${YOUDAO_APP_SECRET}`)
+    .digest("hex");
+
+  const form = new URLSearchParams({
+    q,
+    from: "en",
+    to: "zh-CHS",
+    appKey: YOUDAO_APP_KEY,
+    salt,
+    sign,
+    signType: "v3",
+    curtime,
+  });
+
+  const response = await fetch(YOUDAO_TRANSLATE_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: form.toString(),
+  });
 
   if (!response.ok) {
-    throw new Error("mymemory_request_failed");
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("youdao_auth_failed");
+    }
+    throw new Error("youdao_request_failed");
   }
 
   const data = await response.json();
-  const translation = typeof data?.responseData?.translatedText === "string"
-    ? data.responseData.translatedText
-    : "";
+  if (String(data?.errorCode || "") !== "0") {
+    if (String(data?.errorCode || "") === "202") {
+      throw new Error("youdao_auth_failed");
+    }
+    throw new Error("youdao_request_failed");
+  }
+
+  const translation = Array.isArray(data?.translation) ? data.translation[0] : "";
 
   return String(translation || "").trim();
+}
+
+async function lookupMeaning(word) {
+  const meaning = await lookupMeaningWithYoudao(word);
+  return { meaning, provider: "youdao" };
 }
 
 class FileStore {
@@ -484,14 +527,18 @@ async function main() {
     }
 
     try {
-      const meaning = await lookupMeaningWithMyMemory(word);
+      const result = await lookupMeaning(word);
+      const meaning = String(result?.meaning || "").trim();
       if (!meaning) {
         return res.status(404).json({ error: "未查询到简短释义。" });
       }
-      res.json({ meaning, provider: "mymemory" });
+      res.json({ meaning, provider: result.provider });
     } catch (error) {
-      if (error.message === "mymemory_request_failed") {
-        return res.status(502).json({ error: "MyMemory 接口调用失败。" });
+      if (error.message === "youdao_auth_failed") {
+        return res.status(502).json({ error: "有道翻译鉴权失败，请检查 YOUDAO_APP_KEY 和 YOUDAO_APP_SECRET。" });
+      }
+      if (error.message === "youdao_request_failed" || error.message === "youdao_not_configured") {
+        return res.status(502).json({ error: "有道翻译接口调用失败，请检查环境变量配置和服务状态。" });
       }
       if (error.message === "empty_word") {
         return res.status(400).json({ error: "请输入要查询的单词。" });

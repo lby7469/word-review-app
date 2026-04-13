@@ -1480,8 +1480,7 @@
     const REVIEW_PAGE_URL = "/app/review";
     const AUTH_ME_URL = "/api/auth/me";
     const API_STATE_URL = "/api/state";
-    const DICTIONARY_API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en/";
-    const TRANSLATE_API_BASE = "https://api.mymemory.translated.net/get";
+    const LOOKUP_MEANING_API_URL = "/api/lookup/meaning";
     const DEFAULT_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
     const REINFORCEMENT_INTERVALS = [0, 1, 2];
     const MAX_MEANING_LENGTH = 24;
@@ -1512,6 +1511,7 @@
         meaning: "",
         note: "",
         learnedDate: "",
+        editingWordId: "",
       },
       lastActiveSnapshot: "",
       revealState: {}
@@ -1861,77 +1861,24 @@
       return cleaned.toLowerCase() !== String(word || "").trim().toLowerCase();
     }
 
-    function extractMeaningFromDictionaryData(data) {
-      if (!Array.isArray(data) || data.length === 0) return "";
-
-      const lines = [];
-      for (const entry of data) {
-        for (const meaning of entry.meanings || []) {
-          const partOfSpeech = meaning.partOfSpeech ? `【${meaning.partOfSpeech}】` : "";
-          const definitions = (meaning.definitions || [])
-            .slice(0, 2)
-            .map((item) => item.definition)
-            .filter(Boolean);
-
-          if (definitions.length > 0) {
-            lines.push(`${partOfSpeech}${definitions.join("；")}`);
-          }
-        }
-      }
-
-      return lines.slice(0, 3).join(" / ");
-    }
-
-    async function translateTextToChinese(text) {
-      const cleaned = text.trim();
-      if (!cleaned) return "";
-
-      const url =
-        TRANSLATE_API_BASE +
-        "?q=" +
-        encodeURIComponent(cleaned) +
-        "&langpair=" +
-        encodeURIComponent("en|zh-CN");
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("中文释义翻译失败");
-      }
-
-      const data = await response.json();
-      const translated = data?.responseData?.translatedText;
-      if (!translated || typeof translated !== "string") {
-        throw new Error("中文释义翻译失败");
-      }
-
-      return translated.trim();
-    }
-
     async function fetchMeaning(word) {
       const cleaned = word.trim();
       if (!cleaned) return "";
 
-      try {
-        const directMeaning = trimMeaningText(await translateTextToChinese(cleaned));
-        if (isUsefulMeaning(directMeaning, cleaned)) {
-          return directMeaning;
-        }
-      } catch {}
+      const response = await fetch(LOOKUP_MEANING_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: cleaned }),
+      });
 
-      const response = await fetch(`${DICTIONARY_API_BASE}${encodeURIComponent(cleaned)}`);
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error("简短释义获取失败");
+        throw new Error(data?.error || "简短释义获取失败");
       }
 
-      const data = await response.json();
-      const englishMeaning = extractMeaningFromDictionaryData(data);
-      if (!englishMeaning) {
-        throw new Error("未查询到明确释义");
-      }
-
-      const translatedMeaning = trimMeaningText(await translateTextToChinese(englishMeaning));
-      if (isUsefulMeaning(translatedMeaning, cleaned)) {
-        return translatedMeaning;
+      const meaning = trimMeaningText(data?.meaning || "");
+      if (isUsefulMeaning(meaning, cleaned)) {
+        return meaning;
       }
 
       throw new Error("未查询到简短释义");
@@ -2507,6 +2454,34 @@
       render();
     }
 
+    function startEditWord(wordId) {
+      const target = getWordById(wordId);
+      if (!target) return;
+
+      state.form = {
+        word: target.word || "",
+        meaning: target.meaning || "",
+        note: target.note || "",
+        learnedDate: normalizeSelectedLearnedDate(target.learnedDate),
+        editingWordId: target.id,
+      };
+      state.fetchError = "";
+      state.addSuccessMessage = "";
+      setTab("add");
+      render();
+      document.getElementById("input-word").focus();
+    }
+
+    function resetWordForm() {
+      state.form = {
+        word: "",
+        meaning: "",
+        note: "",
+        learnedDate: todayDate(),
+        editingWordId: "",
+      };
+    }
+
     async function handleLookupMeaning() {
       const word = state.form.word.trim();
       if (!word) return;
@@ -2530,6 +2505,7 @@
       const cleanedWord = state.form.word.trim();
       if (!cleanedWord) return;
       const learnedDate = normalizeSelectedLearnedDate(state.form.learnedDate);
+      const editingWordId = state.form.editingWordId;
 
       let finalMeaning = state.form.meaning.trim();
 
@@ -2548,20 +2524,27 @@
       }
 
       const item = normalizeWord({
-        id: crypto.randomUUID(),
+        id: editingWordId || crypto.randomUUID(),
         word: cleanedWord,
         meaning: finalMeaning || "",
         note: state.form.note.trim(),
         learnedDate,
-        createdAt: learnedDateToIsoString(learnedDate),
+        createdAt: editingWordId
+          ? (getWordById(editingWordId)?.createdAt || learnedDateToIsoString(learnedDate))
+          : learnedDateToIsoString(learnedDate),
         intervals: state.settings.intervals.slice(),
-        completedReviews: [],
-        reinforcementRounds: [],
-        lapseCount: 0,
+        completedReviews: editingWordId ? (getWordById(editingWordId)?.completedReviews || []) : [],
+        reinforcementRounds: editingWordId ? (getWordById(editingWordId)?.reinforcementRounds || []) : [],
+        dailyReview: editingWordId ? normalizeDailyReview(getWordById(editingWordId)?.dailyReview) : normalizeDailyReview(),
+        lapseCount: editingWordId ? (getWordById(editingWordId)?.lapseCount || 0) : 0,
       });
 
-      state.words.unshift(item);
-      state.form = { word: "", meaning: "", note: "", learnedDate: todayDate() };
+      if (editingWordId) {
+        state.words = state.words.map((word) => (word.id === editingWordId ? item : word));
+      } else {
+        state.words.unshift(item);
+      }
+      resetWordForm();
       showAddToast(item);
       void persist();
       render();
@@ -2672,6 +2655,7 @@
       document.getElementById("btn-lookup").disabled = state.isFetchingMeaning || !state.form.word.trim();
       document.getElementById("btn-lookup").textContent = state.isFetchingMeaning ? "查询中" : "获取简短释义";
       document.getElementById("btn-add-word").disabled = !state.form.word.trim();
+      document.getElementById("btn-add-word").textContent = state.form.editingWordId ? "保存修改" : "保存这个单词";
       const errorEl = document.getElementById("fetch-error");
       errorEl.textContent = [state.fetchError, state.syncError].filter(Boolean).join(" ");
       errorEl.classList.toggle("hidden", !errorEl.textContent);
@@ -2721,7 +2705,7 @@
       const checkinStats = getCheckinStats();
 
       document.getElementById("today-record-date").textContent =
-        `记录日期：${normalizeSelectedLearnedDate(state.form.learnedDate)}（可手动选择）`;
+        `${state.form.editingWordId ? "编辑模式" : "记录日期"}：${normalizeSelectedLearnedDate(state.form.learnedDate)}（可手动选择）`;
       const userEl = document.getElementById("auth-username");
       if (userEl) {
         userEl.textContent = state.currentUser?.username || "未登录";
@@ -2983,6 +2967,7 @@
               </div>
             </div>
             <div class="icon-btns">
+              <button class="icon-btn" title="编辑单词" onclick="window.__app.startEditWord('${word.id}')">编辑</button>
               <button class="icon-btn" title="重置进度" onclick="window.__app.resetProgress('${word.id}')">重置</button>
               <button class="icon-btn" title="删除单词" onclick="window.__app.deleteWord('${word.id}')">删除</button>
             </div>
@@ -3131,6 +3116,9 @@
       toggleReveal(wordId, value) {
         state.revealState[wordId] = value;
         renderToday();
+      },
+      startEditWord(wordId) {
+        startEditWord(wordId);
       },
       markReviewDone(wordId, step, source, reinforcementId) {
         markReviewDone(wordId, step, source, reinforcementId);

@@ -14,7 +14,8 @@
 2. 复制 `.env.example` 为 `.env`
 3. 配置 `TOKEN_SECRET`
 4. 如果要使用云数据库，配置 `DATABASE_URL`
-5. 运行：
+5. 如果要使用有道翻译词义查询，配置 `YOUDAO_APP_KEY` 和 `YOUDAO_APP_SECRET`
+6. 运行：
 
 ```bash
 npm install
@@ -62,3 +63,19 @@ DATABASE_URL=postgresql://username:password@host:5432/database_name
 - `PUT /api/state`
 
 只是现在接口会根据当前登录用户读取和保存。
+
+## 词义查询渠道
+
+后端接口 `POST /api/lookup/meaning` 现在使用有道文本翻译 API。
+
+示例环境变量：
+
+```env
+YOUDAO_APP_KEY=your_youdao_app_key
+YOUDAO_APP_SECRET=your_youdao_app_secret
+```
+
+其中：
+
+- `YOUDAO_APP_KEY` 对应有道应用 ID
+- `YOUDAO_APP_SECRET` 对应有道应用密钥

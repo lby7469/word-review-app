@@ -1181,7 +1181,7 @@
       background:
         radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 30%),
         linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244, 249, 246, 0.82));
-      height: 620px;
+      height: 465px;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
@@ -1254,7 +1254,7 @@
     .session-actions.fixed-actions {
       position: absolute;
       left: 50%;
-      bottom: 36px;
+      bottom: 112px;
       transform: translateX(-50%);
       margin: 0;
     }
@@ -1378,7 +1378,7 @@
       .icon-btns { width: 100%; }
       .icon-btns > * { flex: 1; }
       .pill-list .pill { align-items: flex-start; flex-direction: column; }
-      .session-card { height: 560px; }
+      .session-card { height: 420px; }
       .session-footer { align-items: stretch; }
       .session-footer > * { width: 100%; }
       .stats { grid-template-columns: 1fr; margin-top: 0; }
@@ -1658,19 +1658,6 @@
       return `${y}-${m}-${d}`;
     }
 
-    function formatDateTimeCN(date) {
-      return new Intl.DateTimeFormat("zh-CN", {
-        timeZone: "Asia/Shanghai",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      }).format(date);
-    }
-
     function normalizeSelectedLearnedDate(value) {
       return isDateString(value) ? value : todayDate();
     }
@@ -1867,17 +1854,6 @@
         state.syncError = "当前无法写入服务器，数据已暂存到本地浏览器。";
       }
     }
-
-    function downloadJson(filename, data) {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
     function buildMainPlan(learnedDate, intervals) {
       return intervals.map((dayOffset, index) => ({
         step: index + 1,
@@ -2119,45 +2095,6 @@
         lapseCount: typeof raw.lapseCount === "number" ? raw.lapseCount : reinforcementRounds.length,
       };
     }
-
-    function runSelfChecks() {
-      console.assert(addDays("2026-03-20", 1) === "2026-03-21", "addDays should add one day");
-      console.assert(addDays("2026-03-31", 1) === "2026-04-01", "addDays should cross month boundary");
-
-      const sample = normalizeWord({
-        id: "t1",
-        word: "abandon",
-        learnedDate: "2026-03-20",
-        intervals: [0, 1, 2],
-        completedReviews: [1],
-      });
-      console.assert(getAllDueSteps(sample, "2026-03-22").length === 2, "main due steps should be counted");
-      console.assert(getProgress(sample).total === 3, "getProgress should compute total steps");
-      console.assert(wordMatchesQuery(sample, "aban"), "wordMatchesQuery should match word text");
-
-      const reinforced = normalizeWord({
-        id: "t2",
-        word: "keep",
-        learnedDate: "2026-03-20",
-        intervals: [0, 1],
-        reinforcementRounds: [
-          { id: "r1", createdAt: "2026-03-22", baseDate: "2026-03-22", intervals: [0, 1, 2], completedSteps: [1] },
-        ],
-      });
-      console.assert(getAllDueSteps(reinforced, "2026-03-23").length === 3, "reinforcement due steps should be included");
-      console.assert(getNextPendingStep(reinforced, "2026-03-23")?.source === "main", "main plan should be prioritized on same day");
-      console.assert(getDailyReviewState(sample, "2026-03-22")?.remainingShows === 2, "daily review should default to two shows");
-      console.assert(
-        normalizeDailyReview({ date: "2026-03-30", remainingShows: 4, totalShows: 5 }).remainingShows === 4,
-        "daily review normalization should keep valid counters"
-      );
-      console.assert(trimMeaningText("v.私下和解 ,复合 ,私了") === "私下和解 / 复合", "meaning trimming should keep concise translations");
-      console.assert(
-        normalizeActivity({ checkinDates: ["2026-03-30", "2026-03-30", "bad"] }).checkinDates.length === 1,
-        "activity normalization should deduplicate valid dates"
-      );
-    }
-
     async function loadState() {
       try {
         const remote = await apiRequest(API_STATE_URL);
@@ -2506,10 +2443,6 @@
       };
     }
 
-    function applyReviewDone(wordId, step, source = "main", reinforcementId) {
-      applyReviewItemsDone(wordId, [{ step, source, reinforcementId }]);
-    }
-
     function applyReviewItemsDone(wordId, items) {
       state.words = state.words.map((word) => {
         if (word.id !== wordId) return word;
@@ -2576,12 +2509,6 @@
           dailyReview: normalizeDailyReview({ date: today, remainingShows: 0, totalShows: 0 }),
         };
       });
-    }
-
-    function markReviewDone(wordId, step, source = "main", reinforcementId) {
-      applyReviewDone(wordId, step, source, reinforcementId);
-      void persist();
-      render();
     }
 
     function applyWordDailyAnswer(wordId, isKnown) {
@@ -2699,20 +2626,6 @@
       if (!current) return;
       applyWordDailyAnswer(current.id, true);
       finishReviewTurn(current.id);
-      void persist();
-      render();
-    }
-
-    function markDueUnitDone(wordId, reviewDate) {
-      const target = getWordById(wordId);
-      if (!target) return;
-      const unit = getDueReviewUnits(target, todayDate()).find((item) => item.reviewDate === reviewDate);
-      if (!unit) return;
-      applyReviewItemsDone(wordId, unit.items);
-      const updated = getWordById(wordId);
-      if (updated && getDueReviewUnits(updated, todayDate()).length === 0) {
-        setWordDailyReview(wordId, normalizeDailyReview());
-      }
       void persist();
       render();
     }
@@ -2899,16 +2812,6 @@
       }
     }
 
-    function showAddSuccess(word) {
-      state.addSuccessMessage = `${word.word}: ${word.meaning || "暂无释义"}`;
-      syncFormUI();
-      if (addSuccessTimer) clearTimeout(addSuccessTimer);
-      addSuccessTimer = setTimeout(() => {
-        state.addSuccessMessage = "";
-        syncFormUI();
-      }, 3000);
-    }
-
     function showAddToast(word) {
       state.addSuccessMessage = `${word.word} · ${word.meaning || "暂无释义"}`;
       syncFormUI();
@@ -2928,63 +2831,6 @@
         syncFormUI();
       }, 2500);
     }
-
-    function exportData() {
-      downloadJson(`word-review-backup-${todayDate()}.json`, {
-        exportedAt: new Date().toISOString(),
-        beijingDate: todayDate(),
-        settings: state.settings,
-        activity: state.activity,
-        words: state.words,
-      });
-    }
-
-    function importDataFromFile(file) {
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const parsed = JSON.parse(String(reader.result));
-          if (Array.isArray(parsed.words)) {
-            state.words = parsed.words.map(normalizeWord);
-          }
-          if (parsed.settings && Array.isArray(parsed.settings.intervals)) {
-            state.settings = { intervals: parsed.settings.intervals };
-          }
-          if (parsed.activity) {
-            state.activity = normalizeActivity(parsed.activity);
-          }
-          void persist();
-          render();
-        } catch {
-          alert("导入失败：文件格式不正确");
-        }
-      };
-      reader.readAsText(file, "utf-8");
-    }
-
-    function applyIntervalsByPrompt() {
-      const current = state.settings.intervals.join(",");
-      const input = window.prompt("请输入复习间隔，用英文逗号分隔，例如：0,1,2,4,7,15,30", current);
-      if (input == null) return;
-
-      const values = input
-        .split(",")
-        .map((part) => Number(part.trim()))
-        .filter((value) => Number.isFinite(value) && value >= 0);
-
-      if (values.length === 0) {
-        alert("请输入有效的间隔天数，例如：0,1,2,4,7,15,30");
-        return;
-      }
-
-      const uniqueSorted = Array.from(new Set(values)).sort((a, b) => a - b);
-      state.settings = { intervals: uniqueSorted };
-      void persist();
-      render();
-    }
-
     function focusAddWordInput() {
       requestAnimationFrame(() => {
         document.getElementById("input-word")?.focus();
@@ -3591,12 +3437,6 @@
       startEditWord(wordId) {
         startEditWord(wordId);
       },
-      markReviewDone(wordId, step, source, reinforcementId) {
-        markReviewDone(wordId, step, source, reinforcementId);
-      },
-      markDueUnitDone(wordId, reviewDate) {
-        markDueUnitDone(wordId, reviewDate);
-      },
       markWordKnown(wordId) {
         markWordKnown(wordId);
       },
@@ -3636,7 +3476,6 @@
     };
 
     async function init() {
-      runSelfChecks();
       state.form.learnedDate = todayDate();
       const loggedIn = await loadCurrentUser();
       if (!loggedIn) return;
@@ -3670,3 +3509,4 @@
   </script>
 </body>
 </html>
+

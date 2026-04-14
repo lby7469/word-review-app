@@ -2542,8 +2542,8 @@
           lapseCount: (word.lapseCount || 0) + 1,
           dailyReview: normalizeDailyReview({
             date: today,
-            remainingShows: dailyTask.remainingShows + 2,
-            totalShows: dailyTask.totalShows + 3,
+            remainingShows: 3,
+            totalShows: 3,
           }),
         };
       });
@@ -2656,11 +2656,11 @@
       }
 
       if (key === "Enter") {
-        if (state.reviewSession.revealed) {
-          answerSessionKnown();
-          return true;
+        if (!state.reviewSession.revealed) {
+          state.reviewSession.revealed = true;
         }
-        return false;
+        startMeaningEdit(current.id);
+        return true;
       }
 
       if (key === "ArrowLeft") {
@@ -2701,11 +2701,11 @@
       }
 
       if (key === "Enter") {
-        if (revealed) {
-          markWordKnown(firstDueWord.id);
-          return true;
+        if (!revealed) {
+          state.revealState[firstDueWord.id] = true;
         }
-        return false;
+        startMeaningEdit(firstDueWord.id);
+        return true;
       }
 
       if (key === "ArrowLeft") {
@@ -2754,6 +2754,24 @@
       if (!current) return;
       applyWordDailyAnswer(current.id, false);
       finishReviewTurn(current.id);
+      void persist();
+      render();
+    }
+
+    function markAllTodayDone() {
+      const today = todayDate();
+      const dueWordIds = state.words
+        .filter((word) => getDailyReviewState(word, today)?.remainingShows > 0)
+        .map((word) => word.id);
+
+      if (!dueWordIds.length) return;
+
+      dueWordIds.forEach((wordId) => applyAllDueDone(wordId, today));
+      state.reviewSession.queue = [];
+      state.reviewSession.revealed = false;
+      state.lastSpokenWordId = "";
+      syncReviewSessionActivity();
+      showInlineMessage(`已一键完成今日全部复习（${dueWordIds.length} 个单词）`);
       void persist();
       render();
     }
@@ -3078,7 +3096,7 @@
             <div class="focus-kicker">Focus Review</div>
             <h2 class="section-title" style="margin-bottom:8px;">逐词复习模式</h2>
             <div class="desc">
-              每个需要复习的单词今天默认展示 2 次。第一次点“认识”会回到队尾，第二次再点“认识”才算今天完成；如果任意一次点“不认识”，这个单词今天还需要额外再展示 3 次。
+              每个需要复习的单词今天默认展示 2 次。第一次点“认识”会回到队尾，第二次再点“认识”才算今天完成；如果任意一次点“不认识”，这个单词今天“剩余展示次数”会直接重置为 3 次。
             </div>
           </div>
           <div class="focus-brief">
@@ -3251,7 +3269,7 @@
               <div class="session-word">${escapeHtml(current.word)}</div>
               <button class="phonetic-btn" onclick="window.__app.playPronunciation('${escapeHtml(current.word)}')">${phoneticLabel}</button>
               ${meaningBlock}
-              ${state.reviewSession.revealed ? `<div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>` : ""}
+              ${state.reviewSession.revealed ? `<div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会把今天剩余展示次数直接重置为 3。</div>` : ""}
               <div class="session-actions fixed-actions">
                 ${state.reviewSession.revealed ? "" : `<button class="btn" id="btn-session-reveal">显示词义</button>`}
                 ${state.reviewSession.revealed ? `<button class="btn" id="btn-session-known">认识</button>` : ""}
@@ -3267,6 +3285,7 @@
               今日关联计划：${escapeHtml(current.dueUnits.map((unit) => unit.label).join("、"))}
             </div>
             <div class="focus-actions">
+              <button class="btn" id="btn-session-complete-all">一键完成当日所有复习</button>
               <button class="btn btn-outline" id="btn-session-rescan">重新生成队列</button>
               <button class="btn btn-outline" id="btn-session-exit">返回今日复习</button>
             </div>
@@ -3440,6 +3459,10 @@
         }
         if (target.id === "btn-session-unknown") {
           answerSessionUnknown();
+          return;
+        }
+        if (target.id === "btn-session-complete-all") {
+          markAllTodayDone();
         }
       });
 

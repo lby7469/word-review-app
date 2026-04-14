@@ -3213,17 +3213,98 @@
 
     function renderSession() {
       const panelEl = document.getElementById("session-panel");
+      const current = getCurrentSessionWord();
+      const totalWords = state.reviewSession.queue.length;
+
+      if (!current) {
+        panelEl.innerHTML = `
+          <div class="empty">
+            <div class="empty-copy">
+              <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">今日专注复习已完成</div>
+              <div>当前队列里已经没有待处理的单词了。你可以回到“今日复习”查看明细，或稍后再开始新一轮。</div>
+              <div class="focus-actions" style="justify-content:center; margin-top:18px;">
+                <button class="btn" id="btn-session-restart">重新扫描今日队列</button>
+                <button class="btn btn-outline" id="btn-session-back">返回今日复习</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const remainingShows = current.dailyTask?.remainingShows || 0;
+      const lapseMeta = getLapseMeta(current.lapseCount || 0);
+      const favoriteLabel = current.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
+      const favoriteStar = current.favorite ? "★" : "☆";
+      const phoneticLabel = escapeHtml(getPronunciationLabel(current));
+      const isEditingMeaning = state.editingMeaningId === current.id;
+      const meaningBlock = state.reviewSession.revealed
+        ? isEditingMeaning
+          ? `
+            <div style="width:100%; max-width:720px;">
+              <input class="input" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" />
+              <div class="session-actions fixed-actions" style="margin-top:10px;">
+                <button class="btn" onclick="window.__app.saveMeaningEdit('${current.id}')">&#x4FDD;&#x5B58;</button>
+                <button class="btn btn-outline" onclick="window.__app.cancelMeaningEdit()">&#x53D6;&#x6D88;</button>
+              </div>
+            </div>
+          `
+          : `
+            <div class="session-meaning" onclick="window.__app.startMeaningEdit('${current.id}')" title="点击修改词义">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
+            ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
+          `
+        : `<div class="session-tip">先看单词，自己回想词义。准备好后再点击“显示词义”。</div>`;
       panelEl.innerHTML = `
-        <div class="empty">
-          <div class="empty-copy">
-            <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">已移除专注复习页面</div>
-            <div>请在“今日复习”页面继续学习与复习。</div>
-            <div class="focus-actions" style="justify-content:center; margin-top:18px;">
-              <button class="btn btn-outline" id="btn-session-back">返回今日复习</button>
+        <div class="card session-card">
+          <div class="session-date-top">
+            <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
+          </div>
+          <div class="session-actions-top-left">
+            <button class="btn btn-edit" onclick="window.__app.startEditWord('${current.id}')">修改词义</button>
+          </div>
+          <div class="session-actions-top-right">
+            <button class="star-btn" onclick="window.__app.toggleFavorite('${current.id}')" title="${favoriteLabel}">${favoriteStar}</button>
+          </div>
+          <div>
+            <div class="session-top">
+              <div>
+                <div class="session-progress">当前队列还有 ${totalWords} 个单词待过一遍，${escapeHtml(current.word)} 今天还剩 ${remainingShows} 次待展示。</div>
+              </div>
+              <div class="focus-actions">
+                ${current.lapseCount > 0 ? `<div class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${current.lapseCount} 次</div>` : ""}
+              </div>
+            </div>
+
+            <div class="session-main">
+              <div class="session-word">${escapeHtml(current.word)}</div>
+              <button class="phonetic-btn" onclick="window.__app.playPronunciation('${escapeHtml(current.word)}')">${phoneticLabel}</button>
+              ${meaningBlock}
+              ${state.reviewSession.revealed ? `<div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>` : ""}
+              <div class="session-actions fixed-actions">
+                ${state.reviewSession.revealed ? "" : `<button class="btn" id="btn-session-reveal">显示词义</button>`}
+                ${state.reviewSession.revealed ? `<button class="btn" id="btn-session-known">认识</button>` : ""}
+                ${state.reviewSession.revealed ? `<button class="btn btn-danger" id="btn-session-unknown">不认识</button>` : ""}
+                <button class="btn btn-outline" onclick="window.__app.markMastered('${current.id}')">标熟</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="session-footer">
+              <div class="session-meta">
+                当前优先复习：${escapeHtml(current.nextPending?.label || "已完成")}<br />
+              今日关联计划：${escapeHtml(current.dueUnits.map((unit) => unit.label).join("、"))}
+            </div>
+            <div class="focus-actions">
+              <button class="btn btn-outline" id="btn-session-rescan">重新生成队列</button>
+              <button class="btn btn-outline" id="btn-session-exit">返回今日复习</button>
             </div>
           </div>
         </div>
       `;
+      if (state.lastSpokenWordId !== current.id) {
+        state.lastSpokenWordId = current.id;
+        void playPronunciation(current.word);
+      }
     }
 
     function renderAllWords() {

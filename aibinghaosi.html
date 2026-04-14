@@ -743,6 +743,8 @@
 
     .due-side {
       display: flex;
+      flex-direction: column;
+      gap: 8px;
       align-items: flex-start;
     }
 
@@ -1181,7 +1183,7 @@
       background:
         radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 30%),
         linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244, 249, 246, 0.82));
-      height: 465px;
+      height: 560px;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
@@ -1378,7 +1380,7 @@
       .icon-btns { width: 100%; }
       .icon-btns > * { flex: 1; }
       .pill-list .pill { align-items: flex-start; flex-direction: column; }
-      .session-card { height: 420px; }
+      .session-card { height: 504px; }
       .session-footer { align-items: stretch; }
       .session-footer > * { width: 100%; }
       .stats { grid-template-columns: 1fr; margin-top: 0; }
@@ -3064,7 +3066,7 @@
 
             <div class="due-side">
               <button class="btn" style="width:100%;" onclick="window.__app.markAllDueDone('${word.id}')">一键完成本词今日全部复习</button>
-              <button class="btn btn-edit" style="width:100%; margin-top:8px;" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
+              <button class="btn btn-edit" style="width:100%;" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
             </div>
           </div>
         `;

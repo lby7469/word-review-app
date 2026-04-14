@@ -1482,6 +1482,7 @@
     const ACTIVITY_KEY = "ebbinghaus_activity_v1";
     const AUTH_TOKEN_KEY = "word_review_auth_token";
     const INITIAL_TAB_KEY = "word_review_initial_tab";
+    const EDIT_WORD_ID_KEY = "word_review_edit_word_id";
     const LOGIN_PAGE_URL = "/";
     const APP_PAGE_URL = "/app";
     const REVIEW_PAGE_URL = "/app/review";
@@ -1657,6 +1658,14 @@
     function navigateToAppTab(tab) {
       sessionStorage.setItem(INITIAL_TAB_KEY, tab);
       navigateToAppHome();
+    }
+
+    function consumeEditWordId() {
+      const wordId = sessionStorage.getItem(EDIT_WORD_ID_KEY);
+      if (wordId) {
+        sessionStorage.removeItem(EDIT_WORD_ID_KEY);
+      }
+      return wordId || "";
     }
 
     function consumeInitialTab() {
@@ -1915,6 +1924,7 @@
         word: raw.word || "",
         meaning: raw.meaning || "",
         note: raw.note || "",
+        favorite: raw.favorite === true,
         learnedDate: raw.learnedDate || formatDateCN(getBeijingNow()),
         createdAt: raw.createdAt || new Date().toISOString(),
         intervals: Array.isArray(raw.intervals) && raw.intervals.length ? raw.intervals : DEFAULT_INTERVALS,
@@ -2435,6 +2445,19 @@
       render();
     }
 
+    function toggleFavorite(wordId) {
+      state.words = state.words.map((word) =>
+        word.id === wordId
+          ? {
+              ...word,
+              favorite: !word.favorite,
+            }
+          : word
+      );
+      void persist();
+      render();
+    }
+
     function revealSessionMeaning() {
       const current = getCurrentSessionWord();
       if (!current) return;
@@ -2510,6 +2533,12 @@
       };
       state.fetchError = "";
       state.addSuccessMessage = "";
+      if (isReviewRoute()) {
+        sessionStorage.setItem(EDIT_WORD_ID_KEY, target.id);
+        navigateToAppTab("add");
+        return;
+      }
+
       setTab("add");
       render();
       document.getElementById("input-word").focus();
@@ -2571,6 +2600,7 @@
         word: cleanedWord,
         meaning: finalMeaning || "",
         note: state.form.note.trim(),
+        favorite: editingWordId ? getWordById(editingWordId)?.favorite === true : false,
         learnedDate,
         createdAt: editingWordId
           ? (getWordById(editingWordId)?.createdAt || learnedDateToIsoString(learnedDate))
@@ -2875,6 +2905,7 @@
       loadMoreBtnEl.textContent = `\u52A0\u8F7D\u66F4\u591A (${visibleDueToday.length}/${dueToday.length})`;
 
       for (const word of visibleDueToday) {
+        const favoriteLabel = word.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
         const revealed = !!state.revealState[word.id];
         const nextPending = getNextPendingStep(word, todayDate());
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
@@ -2928,6 +2959,7 @@
 
             <div class="due-side">
               <button class="btn btn-outline" style="width:100%; margin-bottom:8px;" onclick="window.__app.startEditWord('${word.id}')">&#x7F16;&#x8F91;&#x5355;&#x8BCD;</button>
+              <button class="btn btn-outline" style="width:100%; margin-bottom:8px;" onclick="window.__app.toggleFavorite('${word.id}')">${favoriteLabel}</button>
               <button class="btn" style="width:100%;" onclick="window.__app.markAllDueDone('${word.id}')">一键完成本词今日全部复习</button>
             </div>
           </div>
@@ -2959,6 +2991,7 @@
 
       const remainingShows = current.dailyTask?.remainingShows || 0;
       const lapseMeta = getLapseMeta(current.lapseCount || 0);
+      const favoriteLabel = current.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
       panelEl.innerHTML = `
         <div class="card session-card">
           <div>
@@ -2994,6 +3027,10 @@
                     </div>
                   `
               }
+              <div class="session-actions" style="margin-top:10px;">
+                <button class="btn btn-outline" onclick="window.__app.startEditWord('${current.id}')">&#x7F16;&#x8F91;&#x5355;&#x8BCD;</button>
+                <button class="btn btn-outline" onclick="window.__app.toggleFavorite('${current.id}')">${favoriteLabel}</button>
+              </div>
             </div>
           </div>
 
@@ -3032,6 +3069,7 @@
       loadMoreBtnEl.textContent = `\u52A0\u8F7D\u66F4\u591A (${visibleWords.length}/${words.length})`;
 
       for (const word of visibleWords) {
+        const favoriteLabel = word.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
         const plan = [
           ...buildMainPlan(word.learnedDate, word.intervals || DEFAULT_INTERVALS).map((item) => ({
@@ -3080,6 +3118,7 @@
             </div>
             <div class="icon-btns">
               <button class="icon-btn" title="编辑单词" onclick="window.__app.startEditWord('${word.id}')">编辑</button>
+              <button class="icon-btn" title="收藏单词" onclick="window.__app.toggleFavorite('${word.id}')">${favoriteLabel}</button>
               <button class="icon-btn" title="重置进度" onclick="window.__app.resetProgress('${word.id}')">重置</button>
               <button class="icon-btn" title="删除单词" onclick="window.__app.deleteWord('${word.id}')">删除</button>
             </div>
@@ -3281,6 +3320,9 @@
       markAllDueDone(wordId) {
         markAllDueDone(wordId);
       },
+      toggleFavorite(wordId) {
+        toggleFavorite(wordId);
+      },
       resetProgress(wordId) {
         resetProgress(wordId);
       },
@@ -3312,6 +3354,11 @@
         state.currentTab = "today";
       }
       bindEvents();
+      const editWordId = consumeEditWordId();
+      if (editWordId) {
+        startEditWord(editWordId);
+        return;
+      }
       render();
     }
 

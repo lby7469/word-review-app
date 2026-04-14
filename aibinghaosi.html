@@ -2592,6 +2592,13 @@
       state.editingMeaningId = wordId;
       state.editingMeaningValue = target.meaning || "";
       renderCurrentTab();
+      requestAnimationFrame(() => {
+        const input = document.querySelector(`.meaning-edit-input[data-word-id="${wordId}"]`);
+        if (input instanceof HTMLInputElement) {
+          input.focus();
+          input.select();
+        }
+      });
     }
 
     function cancelMeaningEdit() {
@@ -2614,6 +2621,116 @@
       state.editingMeaningValue = "";
       void persist();
       renderCurrentTab();
+    }
+
+    function handleMeaningInputKeydown(event, wordId) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveMeaningEdit(wordId);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelMeaningEdit();
+      }
+    }
+
+    function isTypingContext(target) {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+    }
+
+    function handleSessionHotkey(key) {
+      if (state.currentTab !== "session") return false;
+      const current = getCurrentSessionWord();
+      if (!current) return false;
+      if (state.editingMeaningId === current.id) return false;
+
+      if (key === "ArrowRight") {
+        if (!state.reviewSession.revealed) {
+          revealSessionMeaning();
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "Enter") {
+        if (state.reviewSession.revealed) {
+          answerSessionKnown();
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "ArrowLeft") {
+        if (state.reviewSession.revealed) {
+          answerSessionUnknown();
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "ArrowDown") {
+        markMastered(current.id);
+        return true;
+      }
+
+      if (key === "ArrowUp") {
+        toggleFavorite(current.id);
+        return true;
+      }
+
+      return false;
+    }
+
+    function handleTodayHotkey(key) {
+      if (state.currentTab !== "today") return false;
+      const firstDueWord = getDueToday()[0];
+      if (!firstDueWord) return false;
+      if (state.editingMeaningId === firstDueWord.id) return false;
+      const revealed = !!state.revealState[firstDueWord.id];
+
+      if (key === "ArrowRight") {
+        if (!revealed) {
+          state.revealState[firstDueWord.id] = true;
+          renderToday();
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "Enter") {
+        if (revealed) {
+          markWordKnown(firstDueWord.id);
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "ArrowLeft") {
+        if (revealed) {
+          markWordUnknown(firstDueWord.id);
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "ArrowDown") {
+        markMastered(firstDueWord.id);
+        return true;
+      }
+
+      if (key === "ArrowUp") {
+        toggleFavorite(firstDueWord.id);
+        return true;
+      }
+
+      return false;
+    }
+
+    function handleReviewHotkey(key) {
+      return handleSessionHotkey(key) || handleTodayHotkey(key);
     }
 
     function revealSessionMeaning() {
@@ -3012,11 +3129,7 @@
           ? isEditingMeaning
             ? `
               <div style="margin-top:6px;">
-                <input class="input" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" />
-                <div class="review-actions" style="margin-top:10px;">
-                  <button class="btn" onclick="window.__app.saveMeaningEdit('${word.id}')">&#x4FDD;&#x5B58;</button>
-                  <button class="btn btn-outline" onclick="window.__app.cancelMeaningEdit()">&#x53D6;&#x6D88;</button>
-                </div>
+                <input class="input meaning-edit-input" data-word-id="${word.id}" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" onkeydown="window.__app.handleMeaningInputKeydown(event, '${word.id}')" placeholder="输入后按 Enter 保存词义" />
               </div>
             `
             : `
@@ -3105,11 +3218,7 @@
         ? isEditingMeaning
           ? `
             <div style="width:100%; max-width:720px;">
-              <input class="input" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" />
-              <div class="session-actions fixed-actions" style="margin-top:10px;">
-                <button class="btn" onclick="window.__app.saveMeaningEdit('${current.id}')">&#x4FDD;&#x5B58;</button>
-                <button class="btn btn-outline" onclick="window.__app.cancelMeaningEdit()">&#x53D6;&#x6D88;</button>
-              </div>
+              <input class="input meaning-edit-input" data-word-id="${current.id}" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" onkeydown="window.__app.handleMeaningInputKeydown(event, '${current.id}')" placeholder="输入后按 Enter 保存词义" />
             </div>
           `
           : `
@@ -3427,6 +3536,14 @@
         state.todayVisibleCount += TODAY_PAGE_SIZE;
         renderToday();
       });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.defaultPrevented || event.isComposing || event.repeat) return;
+        if (isTypingContext(event.target)) return;
+        if (handleReviewHotkey(event.key)) {
+          event.preventDefault();
+        }
+      });
     }
 
     window.__app = {
@@ -3460,6 +3577,9 @@
       },
       saveMeaningEdit(wordId) {
         saveMeaningEdit(wordId);
+      },
+      handleMeaningInputKeydown(event, wordId) {
+        handleMeaningInputKeydown(event, wordId);
       },
       updateMeaningDraft(value) {
         state.editingMeaningValue = value;

@@ -1533,6 +1533,7 @@
 
           <div class="search-sort">
             <button id="btn-retranslate-all" class="btn btn-outline" type="button">重新翻译全部词义</button>
+            <button id="btn-toggle-favorites" class="btn btn-outline" type="button">仅看收藏</button>
             <input id="input-search" class="input" placeholder="搜索单词 / 中文释义 / 备注" style="min-width:260px;" />
             <select id="select-sort" class="select" style="min-width:140px;">
               <option value="newest">最新添加</option>
@@ -1590,6 +1591,7 @@
       currentTab: "today",
       query: "",
       sortBy: "newest",
+      onlyFavorites: false,
       isFetchingMeaning: false,
       isBulkRetranslating: false,
       fetchError: "",
@@ -1602,6 +1604,7 @@
       todayVisibleCount: TODAY_PAGE_SIZE,
       pronunciationCache: {},
       lastSpokenWordId: "",
+      masteryArmed: { id: "", until: 0 },
       reviewSession: {
         queue: [],
         revealed: false,
@@ -2397,7 +2400,9 @@
 
     function getFilteredWords() {
       const today = todayDate();
-      const result = state.words.filter((word) => wordMatchesQuery(word, state.query));
+      const result = state.words
+        .filter((word) => wordMatchesQuery(word, state.query))
+        .filter((word) => (state.onlyFavorites ? word.favorite === true : true));
 
       if (state.sortBy === "newest") {
         return [...result].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -2615,6 +2620,18 @@
       render();
     }
 
+    function markMastered(wordId) {
+      const now = Date.now();
+      if (state.masteryArmed.id === wordId && state.masteryArmed.until > now) {
+        state.masteryArmed = { id: "", until: 0 };
+        deleteWord(wordId);
+        showInlineMessage("已标熟并移除该单词");
+        return;
+      }
+      state.masteryArmed = { id: wordId, until: now + 5000 };
+      showInlineMessage("再次点击“标熟”将永久移除");
+    }
+
     function revealSessionMeaning() {
       const current = getCurrentSessionWord();
       if (!current) return;
@@ -2673,6 +2690,13 @@
     function deleteWord(wordId) {
       state.words = state.words.filter((word) => word.id !== wordId);
       delete state.revealState[wordId];
+      if (state.reviewSession.queue.length) {
+        state.reviewSession.queue = state.reviewSession.queue.filter((id) => id !== wordId);
+        syncReviewSessionActivity();
+      }
+      if (state.masteryArmed.id === wordId) {
+        state.masteryArmed = { id: "", until: 0 };
+      }
       void persist();
       render();
     }
@@ -2838,6 +2862,16 @@
         state.addSuccessMessage = "";
         syncFormUI();
       }, 3000);
+    }
+
+    function showInlineMessage(message) {
+      state.addSuccessMessage = message;
+      syncFormUI();
+      if (addSuccessTimer) clearTimeout(addSuccessTimer);
+      addSuccessTimer = setTimeout(() => {
+        state.addSuccessMessage = "";
+        syncFormUI();
+      }, 2500);
     }
 
     function exportData() {
@@ -3109,6 +3143,7 @@
                   ${revealed ? "" : `<button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">显示词义</button>`}
                   ${revealed ? `<button class="btn" onclick="window.__app.markWordKnown('${word.id}')">认识</button>` : ""}
                   ${revealed ? `<button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">不认识</button>` : ""}
+                  <button class="btn btn-outline" onclick="window.__app.markMastered('${word.id}')">标熟</button>
                 </div>
               </div>
 
@@ -3189,6 +3224,7 @@
                 ${state.reviewSession.revealed ? "" : `<button class="btn" id="btn-session-reveal">显示词义</button>`}
                 ${state.reviewSession.revealed ? `<button class="btn" id="btn-session-known">认识</button>` : ""}
                 ${state.reviewSession.revealed ? `<button class="btn btn-danger" id="btn-session-unknown">不认识</button>` : ""}
+                <button class="btn btn-outline" onclick="window.__app.markMastered('${current.id}')">标熟</button>
               </div>
             </div>
           </div>
@@ -3219,7 +3255,11 @@
       const emptyEl = document.getElementById("all-empty");
       const loadMoreWrapEl = document.getElementById("all-load-more-wrap");
       const loadMoreBtnEl = document.getElementById("btn-load-more-all");
+      const favoritesBtnEl = document.getElementById("btn-toggle-favorites");
       cardsEl.innerHTML = "";
+      if (favoritesBtnEl) {
+        favoritesBtnEl.textContent = state.onlyFavorites ? "全部单词" : "仅看收藏";
+      }
 
       if (!words.length) {
         emptyEl.classList.remove("hidden");
@@ -3443,6 +3483,12 @@
         void retranslateAllMeanings();
       });
 
+      document.getElementById("btn-toggle-favorites").addEventListener("click", () => {
+        state.onlyFavorites = !state.onlyFavorites;
+        state.allWordsVisibleCount = ALL_WORDS_PAGE_SIZE;
+        renderAllWords();
+      });
+
       document.getElementById("select-sort").addEventListener("change", (e) => {
         state.sortBy = e.target.value;
         state.allWordsVisibleCount = ALL_WORDS_PAGE_SIZE;
@@ -3485,6 +3531,9 @@
       },
       toggleFavorite(wordId) {
         toggleFavorite(wordId);
+      },
+      markMastered(wordId) {
+        markMastered(wordId);
       },
       playPronunciation(word) {
         void playPronunciation(word);

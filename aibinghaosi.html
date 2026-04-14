@@ -1605,6 +1605,8 @@
       pronunciationCache: {},
       lastSpokenWordId: "",
       masteryArmed: { id: "", until: 0 },
+      editingMeaningId: "",
+      editingMeaningValue: "",
       reviewSession: {
         queue: [],
         revealed: false,
@@ -2632,6 +2634,36 @@
       showInlineMessage("再次点击“标熟”将永久移除");
     }
 
+    function startMeaningEdit(wordId) {
+      const target = getWordById(wordId);
+      if (!target) return;
+      state.editingMeaningId = wordId;
+      state.editingMeaningValue = target.meaning || "";
+      renderCurrentTab();
+    }
+
+    function cancelMeaningEdit() {
+      state.editingMeaningId = "";
+      state.editingMeaningValue = "";
+      renderCurrentTab();
+    }
+
+    function saveMeaningEdit(wordId) {
+      const nextMeaning = String(state.editingMeaningValue || "").trim();
+      state.words = state.words.map((word) =>
+        word.id === wordId
+          ? {
+              ...word,
+              meaning: nextMeaning,
+            }
+          : word
+      );
+      state.editingMeaningId = "";
+      state.editingMeaningValue = "";
+      void persist();
+      renderCurrentTab();
+    }
+
     function revealSessionMeaning() {
       const current = getCurrentSessionWord();
       if (!current) return;
@@ -3104,9 +3136,20 @@
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
         const remainingShows = word.dailyTask?.remainingShows || 0;
         const phoneticLabel = escapeHtml(getPronunciationLabel(word));
+        const isEditingMeaning = state.editingMeaningId === word.id;
         const meaningBlock = revealed
-          ? `
-              <div class="meaning">${word.meaning ? escapeHtml(word.meaning) : "暂无释义"}</div>
+          ? isEditingMeaning
+            ? `
+              <div style="margin-top:6px;">
+                <input class="input" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" />
+                <div class="review-actions" style="margin-top:10px;">
+                  <button class="btn" onclick="window.__app.saveMeaningEdit('${word.id}')">&#x4FDD;&#x5B58;</button>
+                  <button class="btn btn-outline" onclick="window.__app.cancelMeaningEdit()">&#x53D6;&#x6D88;</button>
+                </div>
+              </div>
+            `
+            : `
+              <div class="meaning" onclick="window.__app.startMeaningEdit('${word.id}')" title="点击修改词义">${word.meaning ? escapeHtml(word.meaning) : "暂无释义"}</div>
               ${word.note ? `<div class="muted" style="margin-top:10px;">${escapeHtml(word.note)}</div>` : ""}
             `
           : `<div class="muted">点击“显示词义”查看释义</div>`;
@@ -3188,9 +3231,20 @@
       const favoriteLabel = current.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
       const favoriteStar = current.favorite ? "★" : "☆";
       const phoneticLabel = escapeHtml(getPronunciationLabel(current));
+      const isEditingMeaning = state.editingMeaningId === current.id;
       const meaningBlock = state.reviewSession.revealed
-        ? `
-            <div class="session-meaning">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
+        ? isEditingMeaning
+          ? `
+            <div style="width:100%; max-width:720px;">
+              <input class="input" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" />
+              <div class="session-actions fixed-actions" style="margin-top:10px;">
+                <button class="btn" onclick="window.__app.saveMeaningEdit('${current.id}')">&#x4FDD;&#x5B58;</button>
+                <button class="btn btn-outline" onclick="window.__app.cancelMeaningEdit()">&#x53D6;&#x6D88;</button>
+              </div>
+            </div>
+          `
+          : `
+            <div class="session-meaning" onclick="window.__app.startMeaningEdit('${current.id}')" title="点击修改词义">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
             ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
           `
         : `<div class="session-tip">先看单词，自己回想词义。准备好后再点击“显示词义”。</div>`;
@@ -3534,6 +3588,18 @@
       },
       markMastered(wordId) {
         markMastered(wordId);
+      },
+      startMeaningEdit(wordId) {
+        startMeaningEdit(wordId);
+      },
+      cancelMeaningEdit() {
+        cancelMeaningEdit();
+      },
+      saveMeaningEdit(wordId) {
+        saveMeaningEdit(wordId);
+      },
+      updateMeaningDraft(value) {
+        state.editingMeaningValue = value;
       },
       playPronunciation(word) {
         void playPronunciation(word);

@@ -46,7 +46,7 @@ function defaultState() {
   return {
     words: [],
     settings: { intervals: DEFAULT_INTERVALS.slice() },
-    activity: { checkinDates: [], lastActiveDate: "" },
+    activity: { checkinDates: [], lastActiveDate: "", reviewSession: { date: "", queue: [], revealed: false } },
     updatedAt: nowIso(),
   };
 }
@@ -139,6 +139,13 @@ function sanitizeActivity(activity) {
         )
       ).sort()
     : [];
+  const reviewSessionDate =
+    typeof activity?.reviewSession?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(activity.reviewSession.date)
+      ? activity.reviewSession.date
+      : "";
+  const reviewSessionQueue = Array.isArray(activity?.reviewSession?.queue)
+    ? activity.reviewSession.queue.filter((value) => typeof value === "string" && value.trim())
+    : [];
 
   return {
     checkinDates,
@@ -146,6 +153,11 @@ function sanitizeActivity(activity) {
       typeof activity?.lastActiveDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(activity.lastActiveDate)
         ? activity.lastActiveDate
         : "",
+    reviewSession: {
+      date: reviewSessionDate,
+      queue: reviewSessionQueue,
+      revealed: activity?.reviewSession?.revealed === true,
+    },
   };
 }
 

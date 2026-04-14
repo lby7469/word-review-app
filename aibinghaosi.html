@@ -1332,6 +1332,9 @@
     <div id="tab-today" class="tab-shell">
       <div id="today-focus-panel" class="card surface-panel"></div>
       <div id="today-list" class="list"></div>
+      <div id="today-load-more-wrap" class="hidden" style="margin-top:16px; text-align:center;">
+        <button id="btn-load-more-today" class="btn btn-outline" type="button">&#x52A0;&#x8F7D;&#x66F4;&#x591A;</button>
+      </div>
       <div id="today-empty" class="empty hidden">
         <div class="empty-copy">
           <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">今天没有待复习的单词</div>
@@ -1456,7 +1459,7 @@
 
         <div id="all-cards" class="cards-grid"></div>
         <div id="all-load-more-wrap" class="hidden" style="margin-top:16px; text-align:center;">
-          <button id="btn-load-more-all" class="btn btn-outline" type="button">加载更多</button>
+          <button id="btn-load-more-all" class="btn btn-outline" type="button">&#x52A0;&#x8F7D;&#x66F4;&#x591A;</button>
         </div>
         <div id="all-empty" class="empty hidden" style="margin-top: 4px;">
           <div class="empty-copy">
@@ -1489,13 +1492,14 @@
     const REINFORCEMENT_INTERVALS = [0, 1, 2];
     const MAX_MEANING_LENGTH = 24;
     const ALL_WORDS_PAGE_SIZE = 50;
+    const TODAY_PAGE_SIZE = 50;
     const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
     let addSuccessTimer = null;
 
     const state = {
       words: [],
       settings: { intervals: DEFAULT_INTERVALS.slice() },
-      activity: { checkinDates: [], lastActiveDate: "" },
+      activity: { checkinDates: [], lastActiveDate: "", reviewSession: { date: "", queue: [], revealed: false } },
       currentTab: "today",
       query: "",
       sortBy: "newest",
@@ -1508,6 +1512,7 @@
       backendReady: false,
       currentUser: null,
       allWordsVisibleCount: ALL_WORDS_PAGE_SIZE,
+      todayVisibleCount: TODAY_PAGE_SIZE,
       reviewSession: {
         queue: [],
         revealed: false,
@@ -1599,10 +1604,19 @@
       const checkinDates = Array.isArray(raw?.checkinDates)
         ? Array.from(new Set(raw.checkinDates.filter((item) => isDateString(item)))).sort()
         : [];
+      const reviewSessionDate = isDateString(raw?.reviewSession?.date) ? raw.reviewSession.date : "";
+      const reviewSessionQueue = Array.isArray(raw?.reviewSession?.queue)
+        ? raw.reviewSession.queue.filter((item) => typeof item === "string" && item.trim())
+        : [];
 
       return {
         checkinDates,
         lastActiveDate: isDateString(raw?.lastActiveDate) ? raw.lastActiveDate : "",
+        reviewSession: {
+          date: reviewSessionDate,
+          queue: reviewSessionQueue,
+          revealed: raw?.reviewSession?.revealed === true,
+        },
       };
     }
 
@@ -2119,6 +2133,31 @@
         });
     }
 
+    function syncReviewSessionActivity() {
+      const today = todayDate();
+      state.activity = {
+        ...state.activity,
+        reviewSession: {
+          date: today,
+          queue: [...state.reviewSession.queue],
+          revealed: state.reviewSession.revealed,
+        },
+      };
+    }
+
+    function restoreReviewSessionFromActivity() {
+      const today = todayDate();
+      const stored = state.activity?.reviewSession;
+      if (stored?.date === today && Array.isArray(stored.queue) && stored.queue.length) {
+        state.reviewSession.queue = stored.queue.slice();
+        state.reviewSession.revealed = stored.revealed === true;
+        normalizeReviewSessionQueue();
+        return;
+      }
+      state.reviewSession.queue = [];
+      state.reviewSession.revealed = false;
+    }
+
     function buildReviewSessionQueue() {
       return getDueToday().map((word) => word.id);
     }
@@ -2167,6 +2206,8 @@
         state.reviewSession.queue = buildReviewSessionQueue();
       }
       state.reviewSession.revealed = false;
+      syncReviewSessionActivity();
+      void persist();
       state.currentTab = "session";
       render();
     }
@@ -2184,6 +2225,7 @@
         state.reviewSession.queue.push(wordId);
       }
       state.reviewSession.revealed = false;
+      syncReviewSessionActivity();
     }
 
     function getFilteredWords() {
@@ -2686,6 +2728,9 @@
       if (tab === "add" && previousTab !== "add") {
         focusAddWordInput();
       }
+      if (tab === "today" && previousTab !== "today") {
+        state.todayVisibleCount = TODAY_PAGE_SIZE;
+      }
     }
 
     function escapeHtml(text) {
@@ -2777,10 +2822,13 @@
 
     function renderToday() {
       const dueToday = getDueToday();
+      const visibleDueToday = dueToday.slice(0, state.todayVisibleCount);
       const backlog = getBacklogSummary();
       const focusPanelEl = document.getElementById("today-focus-panel");
       const listEl = document.getElementById("today-list");
       const emptyEl = document.getElementById("today-empty");
+      const loadMoreWrapEl = document.getElementById("today-load-more-wrap");
+      const loadMoreBtnEl = document.getElementById("btn-load-more-today");
       listEl.innerHTML = "";
       focusPanelEl.innerHTML = `
         <div class="focus-entry">
@@ -2818,12 +2866,15 @@
 
       if (!dueToday.length) {
         emptyEl.classList.remove("hidden");
+        loadMoreWrapEl.classList.add("hidden");
         return;
       }
 
       emptyEl.classList.add("hidden");
+      loadMoreWrapEl.classList.toggle("hidden", visibleDueToday.length >= dueToday.length);
+      loadMoreBtnEl.textContent = `\u52A0\u8F7D\u66F4\u591A (${visibleDueToday.length}/${dueToday.length})`;
 
-      for (const word of dueToday) {
+      for (const word of visibleDueToday) {
         const revealed = !!state.revealState[word.id];
         const nextPending = getNextPendingStep(word, todayDate());
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
@@ -2977,7 +3028,7 @@
 
       emptyEl.classList.add("hidden");
       loadMoreWrapEl.classList.toggle("hidden", visibleWords.length >= words.length);
-      loadMoreBtnEl.textContent = `åŠ è½½æ›´å¤šï¼ˆ${visibleWords.length}/${words.length}ï¼‰`;
+      loadMoreBtnEl.textContent = `\u52A0\u8F7D\u66F4\u591A (${visibleWords.length}/${words.length})`;
 
       for (const word of visibleWords) {
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
@@ -3199,6 +3250,11 @@
         state.allWordsVisibleCount += ALL_WORDS_PAGE_SIZE;
         renderAllWords();
       });
+
+      document.getElementById("btn-load-more-today").addEventListener("click", () => {
+        state.todayVisibleCount += TODAY_PAGE_SIZE;
+        renderToday();
+      });
     }
 
     window.__app = {
@@ -3240,11 +3296,15 @@
       await loadState();
       if (!state.currentUser) return;
       touchLastActiveDate();
+      restoreReviewSessionFromActivity();
       const initialTab = consumeInitialTab();
       if (isReviewRoute()) {
         state.currentTab = "session";
-        state.reviewSession.queue = buildReviewSessionQueue();
-        state.reviewSession.revealed = false;
+        if (!state.reviewSession.queue.length) {
+          state.reviewSession.queue = buildReviewSessionQueue();
+          syncReviewSessionActivity();
+          void persist();
+        }
       } else if (initialTab && ["today", "calendar", "add", "all"].includes(initialTab)) {
         state.currentTab = initialTab;
       } else if (state.currentTab === "session") {

@@ -3105,8 +3105,8 @@
                 <div class="review-meaning">${meaningBlock}</div>
                 <div class="review-actions">
                   <button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">显示词义</button>
-                  <button class="btn" onclick="window.__app.markWordKnown('${word.id}')">认识</button>
-                  <button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">不认识</button>
+                  ${revealed ? `<button class="btn" onclick="window.__app.markWordKnown('${word.id}')">认识</button>` : ""}
+                  ${revealed ? `<button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">不认识</button>` : ""}
                 </div>
               </div>
 
@@ -3182,11 +3182,11 @@
               <div class="session-word">${escapeHtml(current.word)}</div>
               <button class="phonetic-btn" onclick="window.__app.playPronunciation('${escapeHtml(current.word)}')">${phoneticLabel}</button>
               ${meaningBlock}
-              <div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>
+              ${state.reviewSession.revealed ? `<div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>` : ""}
               <div class="session-actions fixed-actions">
                 <button class="btn" id="btn-session-reveal">显示词义</button>
-                <button class="btn" id="btn-session-known">认识</button>
-                <button class="btn btn-danger" id="btn-session-unknown">不认识</button>
+                ${state.reviewSession.revealed ? `<button class="btn" id="btn-session-known">认识</button>` : ""}
+                ${state.reviewSession.revealed ? `<button class="btn btn-danger" id="btn-session-unknown">不认识</button>` : ""}
               </div>
             </div>
           </div>

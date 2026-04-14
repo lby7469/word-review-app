@@ -176,7 +176,7 @@ function getYoudaoSignInput(value) {
   return text.length <= 20 ? text : `${text.slice(0, 10)}${text.length}${text.slice(-10)}`;
 }
 
-async function lookupMeaningWithYoudao(word) {
+async function requestYoudao(word) {
   const q = String(word || "").trim();
   if (!q) {
     throw new Error("empty_word");
@@ -224,9 +224,23 @@ async function lookupMeaningWithYoudao(word) {
     throw new Error("youdao_request_failed");
   }
 
+  return data;
+}
+
+async function lookupMeaningWithYoudao(word) {
+  const data = await requestYoudao(word);
   const translation = Array.isArray(data?.translation) ? data.translation[0] : "";
 
   return String(translation || "").trim();
+}
+
+async function lookupPronunciationWithYoudao(word) {
+  const data = await requestYoudao(word);
+  const speakUrl = String(data?.speakUrl || "").trim();
+  if (!speakUrl) {
+    throw new Error("youdao_tts_unavailable");
+  }
+  return speakUrl;
 }
 
 async function lookupMeaning(word) {
@@ -561,6 +575,32 @@ async function main() {
       }
       if (error.message === "empty_word") {
         return res.status(400).json({ error: "请输入要查询的单词。" });
+      }
+      throw error;
+    }
+  });
+
+  app.post("/api/lookup/pronunciation", async (req, res) => {
+    const word = String(req.body?.word || "").trim();
+    if (!word) {
+      return res.status(400).json({ error: "请输⼊要查询的单词。" });
+    }
+
+    try {
+      const speakUrl = await lookupPronunciationWithYoudao(word);
+      res.json({ speakUrl, provider: "youdao" });
+    } catch (error) {
+      if (error.message === "youdao_auth_failed") {
+        return res.status(502).json({ error: "有道翻译鉴权失败，请检查 YOUDAO_APP_KEY 和 YOUDAO_APP_SECRET。" });
+      }
+      if (error.message === "youdao_request_failed" || error.message === "youdao_not_configured") {
+        return res.status(502).json({ error: "有道翻译接口调用失败，请检查环境变量配置和服务状态。" });
+      }
+      if (error.message === "youdao_tts_unavailable") {
+        return res.status(502).json({ error: "有道服务未返回发音接口，请确认已绑定服务。" });
+      }
+      if (error.message === "empty_word") {
+        return res.status(400).json({ error: "请输⼊要查询的单词。" });
       }
       throw error;
     }

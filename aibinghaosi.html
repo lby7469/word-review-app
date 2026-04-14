@@ -1489,6 +1489,7 @@
     const AUTH_ME_URL = "/api/auth/me";
     const API_STATE_URL = "/api/state";
     const LOOKUP_MEANING_API_URL = "/api/lookup/meaning";
+    const PRONUNCIATION_API_URL = "/api/lookup/pronunciation";
     const DEFAULT_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
     const REINFORCEMENT_INTERVALS = [0, 1, 2];
     const MAX_MEANING_LENGTH = 24;
@@ -1514,6 +1515,8 @@
       currentUser: null,
       allWordsVisibleCount: ALL_WORDS_PAGE_SIZE,
       todayVisibleCount: TODAY_PAGE_SIZE,
+      pronunciationCache: {},
+      lastSpokenWordId: "",
       reviewSession: {
         queue: [],
         revealed: false,
@@ -1906,6 +1909,51 @@
       }
 
       throw new Error("未查询到简短释义");
+    }
+
+    async function fetchPronunciationUrl(word) {
+      const cleaned = word.trim();
+      if (!cleaned) return "";
+      if (state.pronunciationCache[cleaned]) {
+        return state.pronunciationCache[cleaned];
+      }
+
+      const data = await apiRequest(PRONUNCIATION_API_URL, {
+        method: "POST",
+        body: JSON.stringify({ word: cleaned }),
+      });
+      const speakUrl = String(data?.speakUrl || "").trim();
+      if (speakUrl) {
+        state.pronunciationCache[cleaned] = speakUrl;
+      }
+      return speakUrl;
+    }
+
+    function playSpeechFallback(word) {
+      if (!("speechSynthesis" in window)) return;
+      const utter = new SpeechSynthesisUtterance(word);
+      utter.lang = "en-US";
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find((voice) => voice.lang === "en-US") || voices.find((voice) => voice.lang.startsWith("en"));
+      if (preferred) {
+        utter.voice = preferred;
+      }
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
+    async function playPronunciation(word) {
+      const cleaned = String(word || "").trim();
+      if (!cleaned) return;
+      try {
+        const speakUrl = await fetchPronunciationUrl(cleaned);
+        if (speakUrl) {
+          const audio = new Audio(speakUrl);
+          await audio.play();
+          return;
+        }
+      } catch {}
+      playSpeechFallback(cleaned);
     }
 
     function normalizeWord(raw) {
@@ -3030,6 +3078,7 @@
               <div class="session-actions" style="margin-top:10px;">
                 <button class="btn btn-outline" onclick="window.__app.startEditWord('${current.id}')">&#x7F16;&#x8F91;&#x5355;&#x8BCD;</button>
                 <button class="btn btn-outline" onclick="window.__app.toggleFavorite('${current.id}')">${favoriteLabel}</button>
+                <button class="btn btn-outline" onclick="window.__app.playPronunciation('${escapeHtml(current.word)}')">&#x6717;&#x8BFB;</button>
               </div>
             </div>
           </div>
@@ -3046,6 +3095,10 @@
           </div>
         </div>
       `;
+      if (state.lastSpokenWordId !== current.id) {
+        state.lastSpokenWordId = current.id;
+        void playPronunciation(current.word);
+      }
     }
 
     function renderAllWords() {
@@ -3322,6 +3375,9 @@
       },
       toggleFavorite(wordId) {
         toggleFavorite(wordId);
+      },
+      playPronunciation(word) {
+        void playPronunciation(word);
       },
       resetProgress(wordId) {
         resetProgress(wordId);

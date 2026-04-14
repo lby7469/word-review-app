@@ -288,7 +288,7 @@
       flex-wrap: wrap;
       position: relative;
       min-height: 320px;
-      padding-top: 12px;
+      padding-top: 36px;
     }
 
     .due-main {
@@ -333,19 +333,17 @@
       height: 40px;
     }
 
-    .due-actions-top-left {
-      display: inline-flex;
-      gap: 8px;
-      margin-right: 8px;
-    }
-
+    .due-actions-top-left,
     .due-actions-top-right {
       position: absolute;
       top: 12px;
-      right: 12px;
       display: inline-flex;
       gap: 8px;
       z-index: 2;
+    }
+
+    .due-actions-top-left {
+      left: 12px;
     }
 
     .due-actions-top-right {
@@ -3045,12 +3043,7 @@
             </div>
             <div class="due-main">
               <div class="due-top">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                  <div class="due-actions-top-left">
-                    <button class="btn btn-edit" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
-                  </div>
-                  <div class="due-word">${escapeHtml(word.word)}</div>
-                </div>
+                <div class="due-word">${escapeHtml(word.word)}</div>
                 <button class="phonetic-btn" onclick="window.__app.playPronunciation('${escapeHtml(word.word)}')">${phoneticLabel}</button>
                 ${word.lapseCount > 0 ? `<span class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${word.lapseCount} 次</span>` : ""}
               </div>

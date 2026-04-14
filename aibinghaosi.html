@@ -1181,10 +1181,10 @@
       background:
         radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 30%),
         linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244, 249, 246, 0.82));
-      min-height: 520px;
+      height: 620px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
       position: relative;
       padding-top: 36px;
     }
@@ -1230,8 +1230,8 @@
       display: grid;
       place-items: center;
       text-align: center;
-      gap: 18px;
-      padding: 20px 0 28px;
+      gap: 16px;
+      padding: 16px 0 20px;
     }
 
     .session-word {
@@ -1252,7 +1252,11 @@
     }
 
     .session-actions.fixed-actions {
-      margin-top: 10px;
+      position: absolute;
+      left: 50%;
+      bottom: 36px;
+      transform: translateX(-50%);
+      margin: 0;
     }
 
     .session-actions-top-left,
@@ -1314,6 +1318,7 @@
       flex-wrap: wrap;
       padding-top: 18px;
       border-top: 1px solid rgba(111, 138, 131, 0.14);
+      margin-top: auto;
     }
 
     .session-meta {
@@ -1373,7 +1378,7 @@
       .icon-btns { width: 100%; }
       .icon-btns > * { flex: 1; }
       .pill-list .pill { align-items: flex-start; flex-direction: column; }
-      .session-card { min-height: 460px; }
+      .session-card { height: 560px; }
       .session-footer { align-items: stretch; }
       .session-footer > * { width: 100%; }
       .stats { grid-template-columns: 1fr; margin-top: 0; }

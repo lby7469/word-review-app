@@ -37,9 +37,8 @@
       background: var(--bg);
       color: var(--text);
       background-image:
-        radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 26%),
-        radial-gradient(circle at top right, rgba(255, 214, 153, 0.44), transparent 22%),
-        linear-gradient(180deg, #fbf8f2 0%, #f6f1e9 18%, var(--bg) 45%, #ece9df 100%);
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 38%),
+        linear-gradient(180deg, #fbf8f2 0%, #f3eee6 35%, var(--bg) 100%);
       position: relative;
     }
 
@@ -48,22 +47,14 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      background:
-        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.18)),
-        repeating-linear-gradient(
-          90deg,
-          transparent 0,
-          transparent 42px,
-          rgba(111, 138, 131, 0.04) 42px,
-          rgba(111, 138, 131, 0.04) 43px
-        );
-      mask-image: linear-gradient(180deg, rgba(0,0,0,0.45), transparent 78%);
+      background: linear-gradient(rgba(255,255,255,0.24), rgba(255,255,255,0.12));
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.28), transparent 80%);
     }
 
     .container {
-      max-width: 1280px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 36px 24px 56px;
+      padding: 32px 22px 52px;
     }
 
     .grid-top {
@@ -75,11 +66,11 @@
 
     .card {
       background: var(--card);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border-radius: 30px;
-      box-shadow: var(--shadow);
-      padding: 26px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 24px;
+      box-shadow: var(--shadow-soft);
+      padding: 24px;
       border: 1px solid rgba(255,255,255,0.72);
       position: relative;
       overflow: hidden;
@@ -95,7 +86,7 @@
     }
 
     .title {
-      font-size: 38px;
+      font-size: 34px;
       line-height: 1.04;
       font-weight: 800;
       letter-spacing: -0.03em;
@@ -104,9 +95,9 @@
 
     .desc {
       color: var(--muted);
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.7;
-      max-width: 60ch;
+      max-width: 62ch;
     }
 
     .row-between {
@@ -120,8 +111,8 @@
     .stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-      margin-top: 24px;
+      gap: 12px;
+      margin-top: 20px;
     }
 
     .stat-box {
@@ -133,7 +124,7 @@
       box-shadow: var(--shadow-soft);
       position: relative;
       overflow: hidden;
-      min-height: 116px;
+      min-height: 96px;
       display: grid;
       align-content: space-between;
     }
@@ -156,7 +147,7 @@
     }
 
     .stat-value {
-      font-size: 34px;
+      font-size: 30px;
       font-weight: 800;
       letter-spacing: -0.03em;
       line-height: 1;
@@ -169,8 +160,8 @@
     .stats .stat-box:nth-child(3) .stat-value { color: #b45309; }
     .stats .stat-box:nth-child(3)::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
     .section-title {
-      margin: 0 0 8px;
-      font-size: 24px;
+      margin: 0 0 6px;
+      font-size: 22px;
       font-weight: 800;
       letter-spacing: -0.02em;
     }
@@ -192,17 +183,17 @@
       border: 0;
       background: linear-gradient(135deg, var(--primary), var(--primary-strong));
       color: var(--primary-text);
-      padding: 12px 18px;
-      border-radius: 16px;
+      padding: 11px 16px;
+      border-radius: 14px;
       cursor: pointer;
       font-weight: 700;
-      box-shadow: 0 12px 24px rgba(29, 78, 216, 0.22);
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
       transition: transform .12s ease, opacity .2s ease, box-shadow .2s ease, background .2s ease;
     }
 
     .btn:hover {
       opacity: .98;
-      box-shadow: 0 16px 28px rgba(29, 78, 216, 0.28);
+      box-shadow: 0 12px 22px rgba(15, 23, 42, 0.16);
       transform: translateY(-1px);
     }
     .btn:active { transform: translateY(1px); }
@@ -213,10 +204,17 @@
     }
 
     .btn-outline {
-      background: rgba(255,255,255,0.82);
+      background: rgba(255,255,255,0.92);
       color: var(--text);
-      border: 1px solid rgba(148, 163, 184, 0.24);
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      box-shadow: 0 8px 16px rgba(15, 23, 42, 0.05);
+    }
+
+    .btn-edit {
+      background: var(--warn-bg);
+      color: var(--warn-text);
+      border: 1px solid rgba(154, 93, 0, 0.22);
+      box-shadow: 0 8px 16px rgba(154, 93, 0, 0.08);
     }
 
     .btn-danger {
@@ -280,7 +278,7 @@
 
     .list {
       display: grid;
-      gap: 14px;
+      gap: 12px;
     }
 
     .due-card {
@@ -305,7 +303,7 @@
     .review-panel {
       background: linear-gradient(180deg, #fbfffd, #edf7f3);
       border-radius: 22px;
-      padding: 20px;
+      padding: 18px;
       margin: 16px 0 14px;
       border: 1px solid rgba(15, 118, 110, 0.12);
       display: flex;
@@ -1205,6 +1203,14 @@
       color: var(--muted);
       font-size: 13px;
       font-weight: 700;
+    }
+
+    .session-date-top {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
     }
 
     .session-progress {
@@ -3167,7 +3173,7 @@
         card.innerHTML = `
           <div class="due-card">
             <div class="due-actions-top-left">
-              <button class="btn btn-outline" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
+              <button class="btn btn-edit" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
             </div>
             <div class="due-actions-top-right">
               <button class="star-btn" onclick="window.__app.toggleFavorite('${word.id}')" title="${favoriteLabel}">${favoriteStar}</button>
@@ -3250,8 +3256,11 @@
         : `<div class="session-tip">先看单词，自己回想词义。准备好后再点击“显示词义”。</div>`;
       panelEl.innerHTML = `
         <div class="card session-card">
+          <div class="session-date-top">
+            <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
+          </div>
           <div class="session-actions-top-left">
-            <button class="btn btn-outline" onclick="window.__app.startEditWord('${current.id}')">修改词义</button>
+            <button class="btn btn-edit" onclick="window.__app.startEditWord('${current.id}')">修改词义</button>
           </div>
           <div class="session-actions-top-right">
             <button class="star-btn" onclick="window.__app.toggleFavorite('${current.id}')" title="${favoriteLabel}">${favoriteStar}</button>
@@ -3259,12 +3268,10 @@
           <div>
             <div class="session-top">
               <div>
-                <div class="focus-kicker">Daily Session</div>
                 <h2 class="section-title" style="margin-bottom:8px;">专注复习</h2>
                 <div class="session-progress">当前队列还有 ${totalWords} 个单词待过一遍，${escapeHtml(current.word)} 今天还剩 ${remainingShows} 次待展示。</div>
               </div>
               <div class="focus-actions">
-                <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
                 ${current.lapseCount > 0 ? `<div class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${current.lapseCount} 次</div>` : ""}
               </div>
             </div>

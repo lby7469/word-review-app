@@ -288,6 +288,9 @@
       gap: 16px;
       justify-content: space-between;
       flex-wrap: wrap;
+      position: relative;
+      min-height: 320px;
+      padding-top: 36px;
     }
 
     .due-main {
@@ -305,6 +308,61 @@
       padding: 20px;
       margin: 16px 0 14px;
       border: 1px solid rgba(15, 118, 110, 0.12);
+      display: flex;
+      flex-direction: column;
+      min-height: 180px;
+    }
+
+    .review-meaning {
+      min-height: 64px;
+      max-height: 120px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .review-meaning .meaning {
+      margin-top: 6px;
+    }
+
+    .review-actions {
+      margin-top: auto;
+    }
+
+    .due-actions-top-left,
+    .due-actions-top-right {
+      position: absolute;
+      top: 12px;
+      display: inline-flex;
+      gap: 8px;
+      z-index: 2;
+    }
+
+    .due-actions-top-left {
+      left: 12px;
+    }
+
+    .due-actions-top-right {
+      right: 12px;
+    }
+
+    .star-btn {
+      border: 1px solid rgba(111, 138, 131, 0.28);
+      background: rgba(255,255,255,0.7);
+      border-radius: 999px;
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .phonetic-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 0;
     }
 
     .muted {
@@ -1122,6 +1180,8 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      position: relative;
+      padding-top: 36px;
     }
 
     .session-top {
@@ -1174,6 +1234,29 @@
       font-size: 24px;
       line-height: 1.7;
       color: var(--text-soft);
+      max-height: 150px;
+      overflow: auto;
+    }
+
+    .session-actions.fixed-actions {
+      margin-top: 10px;
+    }
+
+    .session-actions-top-left,
+    .session-actions-top-right {
+      position: absolute;
+      top: 12px;
+      display: inline-flex;
+      gap: 8px;
+      z-index: 2;
+    }
+
+    .session-actions-top-left {
+      left: 12px;
+    }
+
+    .session-actions-top-right {
+      right: 12px;
     }
 
     .session-note {
@@ -1849,6 +1932,14 @@
         .trim();
     }
 
+    function getPronunciationLabel(word) {
+      const stored = word?.pronunciation || "";
+      if (stored) return `/${stored}/`;
+      const cached = state.pronunciationCache[word?.word || ""]?.phonetic || "";
+      if (cached) return `/${cached}/`;
+      return "US";
+    }
+
     function trimMeaningText(text, maxLength = MAX_MEANING_LENGTH) {
       let value = normalizeMeaningText(text)
         .replace(/^(n|v|adj|adv|prep|pron|vt|vi|aux|num)\.\s*/i, "")
@@ -1911,9 +2002,9 @@
       throw new Error("未查询到简短释义");
     }
 
-    async function fetchPronunciationUrl(word) {
+    async function fetchPronunciation(word) {
       const cleaned = word.trim();
-      if (!cleaned) return "";
+      if (!cleaned) return { speakUrl: "", phonetic: "" };
       if (state.pronunciationCache[cleaned]) {
         return state.pronunciationCache[cleaned];
       }
@@ -1923,10 +2014,12 @@
         body: JSON.stringify({ word: cleaned }),
       });
       const speakUrl = String(data?.speakUrl || "").trim();
-      if (speakUrl) {
-        state.pronunciationCache[cleaned] = speakUrl;
+      const phonetic = String(data?.phonetic || "").trim();
+      const entry = { speakUrl, phonetic };
+      if (speakUrl || phonetic) {
+        state.pronunciationCache[cleaned] = entry;
       }
-      return speakUrl;
+      return entry;
     }
 
     function playSpeechFallback(word) {
@@ -1946,9 +2039,22 @@
       const cleaned = String(word || "").trim();
       if (!cleaned) return;
       try {
-        const speakUrl = await fetchPronunciationUrl(cleaned);
-        if (speakUrl) {
-          const audio = new Audio(speakUrl);
+        const entry = await fetchPronunciation(cleaned);
+        if (entry?.phonetic) {
+          let changed = false;
+          state.words = state.words.map((item) => {
+            if (item.word !== cleaned) return item;
+            if (item.pronunciation === entry.phonetic) return item;
+            changed = true;
+            return { ...item, pronunciation: entry.phonetic };
+          });
+          if (changed) {
+            void persist();
+            renderCurrentTab();
+          }
+        }
+        if (entry?.speakUrl) {
+          const audio = new Audio(entry.speakUrl);
           await audio.play();
           return;
         }
@@ -1973,6 +2079,7 @@
         meaning: raw.meaning || "",
         note: raw.note || "",
         favorite: raw.favorite === true,
+        pronunciation: raw.pronunciation || "",
         learnedDate: raw.learnedDate || formatDateCN(getBeijingNow()),
         createdAt: raw.createdAt || new Date().toISOString(),
         intervals: Array.isArray(raw.intervals) && raw.intervals.length ? raw.intervals : DEFAULT_INTERVALS,
@@ -2649,6 +2756,7 @@
         meaning: finalMeaning || "",
         note: state.form.note.trim(),
         favorite: editingWordId ? getWordById(editingWordId)?.favorite === true : false,
+        pronunciation: editingWordId ? getWordById(editingWordId)?.pronunciation || "" : "",
         learnedDate,
         createdAt: editingWordId
           ? (getWordById(editingWordId)?.createdAt || learnedDateToIsoString(learnedDate))
@@ -2954,10 +3062,18 @@
 
       for (const word of visibleDueToday) {
         const favoriteLabel = word.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
+        const favoriteStar = word.favorite ? "★" : "☆";
         const revealed = !!state.revealState[word.id];
         const nextPending = getNextPendingStep(word, todayDate());
         const lapseMeta = getLapseMeta(word.lapseCount || 0);
         const remainingShows = word.dailyTask?.remainingShows || 0;
+        const phoneticLabel = escapeHtml(getPronunciationLabel(word));
+        const meaningBlock = revealed
+          ? `
+              <div class="meaning">${word.meaning ? escapeHtml(word.meaning) : "暂无释义"}</div>
+              ${word.note ? `<div class="muted" style="margin-top:10px;">${escapeHtml(word.note)}</div>` : ""}
+            `
+          : `<div class="muted">点击“显示词义”查看释义</div>`;
 
         const dueStepsHtml = word.dueUnits
           .map((unit) => `
@@ -2971,32 +3087,27 @@
         card.className = "card surface-panel";
         card.innerHTML = `
           <div class="due-card">
+            <div class="due-actions-top-left">
+              <button class="btn btn-outline" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
+            </div>
+            <div class="due-actions-top-right">
+              <button class="star-btn" onclick="window.__app.toggleFavorite('${word.id}')" title="${favoriteLabel}">${favoriteStar}</button>
+            </div>
             <div class="due-main">
               <div class="due-top">
                 <div class="due-word">${escapeHtml(word.word)}</div>
+                <button class="phonetic-btn" onclick="window.__app.playPronunciation('${escapeHtml(word.word)}')">${phoneticLabel}</button>
                 ${word.lapseCount > 0 ? `<span class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${word.lapseCount} 次</span>` : ""}
               </div>
 
               <div class="review-panel">
                 <div class="muted">先看单词，自己回想词义</div>
-                ${
-                  !revealed
-                    ? `
-                      <div class="review-actions">
-                        <button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">显示释义</button>
-                      </div>
-                    `
-                    : `
-                      <div style="margin-top:12px;">
-                        <div class="meaning">${word.meaning ? escapeHtml(word.meaning) : "暂无释义"}</div>
-                        ${word.note ? `<div class="muted" style="margin-top:10px;">${escapeHtml(word.note)}</div>` : ""}
-                        <div class="review-actions">
-                          <button class="btn" onclick="window.__app.markWordKnown('${word.id}')">认识</button>
-                          <button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">不认识</button>
-                        </div>
-                      </div>
-                    `
-                }
+                <div class="review-meaning">${meaningBlock}</div>
+                <div class="review-actions">
+                  <button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">显示词义</button>
+                  <button class="btn" onclick="window.__app.markWordKnown('${word.id}')">认识</button>
+                  <button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">不认识</button>
+                </div>
               </div>
 
               <div class="muted">学习日期：${escapeHtml(word.learnedDate)}</div>
@@ -3006,8 +3117,6 @@
             </div>
 
             <div class="due-side">
-              <button class="btn btn-outline" style="width:100%; margin-bottom:8px;" onclick="window.__app.startEditWord('${word.id}')">&#x7F16;&#x8F91;&#x5355;&#x8BCD;</button>
-              <button class="btn btn-outline" style="width:100%; margin-bottom:8px;" onclick="window.__app.toggleFavorite('${word.id}')">${favoriteLabel}</button>
               <button class="btn" style="width:100%;" onclick="window.__app.markAllDueDone('${word.id}')">一键完成本词今日全部复习</button>
             </div>
           </div>
@@ -3040,8 +3149,22 @@
       const remainingShows = current.dailyTask?.remainingShows || 0;
       const lapseMeta = getLapseMeta(current.lapseCount || 0);
       const favoriteLabel = current.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
+      const favoriteStar = current.favorite ? "★" : "☆";
+      const phoneticLabel = escapeHtml(getPronunciationLabel(current));
+      const meaningBlock = state.reviewSession.revealed
+        ? `
+            <div class="session-meaning">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
+            ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
+          `
+        : `<div class="session-tip">先看单词，自己回想词义。准备好后再点击“显示词义”。</div>`;
       panelEl.innerHTML = `
         <div class="card session-card">
+          <div class="session-actions-top-left">
+            <button class="btn btn-outline" onclick="window.__app.startEditWord('${current.id}')">修改词义</button>
+          </div>
+          <div class="session-actions-top-right">
+            <button class="star-btn" onclick="window.__app.toggleFavorite('${current.id}')" title="${favoriteLabel}">${favoriteStar}</button>
+          </div>
           <div>
             <div class="session-top">
               <div>
@@ -3057,28 +3180,13 @@
 
             <div class="session-main">
               <div class="session-word">${escapeHtml(current.word)}</div>
-              ${
-                !state.reviewSession.revealed
-                  ? `
-                    <div class="session-tip">先看单词，自己回想词义。准备好后再展开答案。</div>
-                    <div class="session-actions">
-                      <button class="btn" id="btn-session-reveal">显示释义</button>
-                    </div>
-                  `
-                  : `
-                    <div class="session-meaning">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
-                    ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
-                    <div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>
-                    <div class="session-actions">
-                      <button class="btn" id="btn-session-known">认识</button>
-                      <button class="btn btn-danger" id="btn-session-unknown">不认识</button>
-                    </div>
-                  `
-              }
-              <div class="session-actions" style="margin-top:10px;">
-                <button class="btn btn-outline" onclick="window.__app.startEditWord('${current.id}')">&#x7F16;&#x8F91;&#x5355;&#x8BCD;</button>
-                <button class="btn btn-outline" onclick="window.__app.toggleFavorite('${current.id}')">${favoriteLabel}</button>
-                <button class="btn btn-outline" onclick="window.__app.playPronunciation('${escapeHtml(current.word)}')">&#x6717;&#x8BFB;</button>
+              <button class="phonetic-btn" onclick="window.__app.playPronunciation('${escapeHtml(current.word)}')">${phoneticLabel}</button>
+              ${meaningBlock}
+              <div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>
+              <div class="session-actions fixed-actions">
+                <button class="btn" id="btn-session-reveal">显示词义</button>
+                <button class="btn" id="btn-session-known">认识</button>
+                <button class="btn btn-danger" id="btn-session-unknown">不认识</button>
               </div>
             </div>
           </div>

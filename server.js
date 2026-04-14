@@ -237,10 +237,12 @@ async function lookupMeaningWithYoudao(word) {
 async function lookupPronunciationWithYoudao(word) {
   const data = await requestYoudao(word);
   const speakUrl = String(data?.speakUrl || "").trim();
+  const basic = data?.basic || {};
+  const phonetic = String(basic["us-phonetic"] || basic.phonetic || "").trim();
   if (!speakUrl) {
     throw new Error("youdao_tts_unavailable");
   }
-  return speakUrl;
+  return { speakUrl, phonetic };
 }
 
 async function lookupMeaning(word) {

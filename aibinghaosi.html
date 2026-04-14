@@ -326,6 +326,7 @@
 
     .review-actions {
       margin-top: auto;
+      min-height: 48px;
     }
 
     .due-actions-top-left,
@@ -1280,6 +1281,7 @@
       justify-content: center;
       gap: 12px;
       flex-wrap: wrap;
+      min-height: 48px;
     }
 
     .session-actions .btn {
@@ -3104,7 +3106,7 @@
                 <div class="muted">先看单词，自己回想词义</div>
                 <div class="review-meaning">${meaningBlock}</div>
                 <div class="review-actions">
-                  <button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">显示词义</button>
+                  ${revealed ? "" : `<button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">显示词义</button>`}
                   ${revealed ? `<button class="btn" onclick="window.__app.markWordKnown('${word.id}')">认识</button>` : ""}
                   ${revealed ? `<button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">不认识</button>` : ""}
                 </div>
@@ -3184,7 +3186,7 @@
               ${meaningBlock}
               ${state.reviewSession.revealed ? `<div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会在今天剩余展示次数上再加 3。</div>` : ""}
               <div class="session-actions fixed-actions">
-                <button class="btn" id="btn-session-reveal">显示词义</button>
+                ${state.reviewSession.revealed ? "" : `<button class="btn" id="btn-session-reveal">显示词义</button>`}
                 ${state.reviewSession.revealed ? `<button class="btn" id="btn-session-known">认识</button>` : ""}
                 ${state.reviewSession.revealed ? `<button class="btn btn-danger" id="btn-session-unknown">不认识</button>` : ""}
               </div>

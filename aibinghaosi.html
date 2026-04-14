@@ -2648,8 +2648,8 @@
       if (state.editingMeaningId === current.id) return false;
 
       if (key === "ArrowRight") {
-        if (!state.reviewSession.revealed) {
-          revealSessionMeaning();
+        if (state.reviewSession.revealed) {
+          answerSessionKnown();
           return true;
         }
         return false;
@@ -2692,9 +2692,8 @@
       const revealed = !!state.revealState[firstDueWord.id];
 
       if (key === "ArrowRight") {
-        if (!revealed) {
-          state.revealState[firstDueWord.id] = true;
-          renderToday();
+        if (revealed) {
+          markWordKnown(firstDueWord.id);
           return true;
         }
         return false;

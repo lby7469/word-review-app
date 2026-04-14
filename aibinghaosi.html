@@ -3035,9 +3035,6 @@
         card.className = "card surface-panel";
         card.innerHTML = `
           <div class="due-card">
-            <div class="due-actions-top-left">
-              <button class="btn btn-edit" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
-            </div>
             <div class="due-actions-top-right">
               <button class="star-btn" onclick="window.__app.toggleFavorite('${word.id}')" title="${favoriteLabel}">${favoriteStar}</button>
             </div>
@@ -3067,6 +3064,7 @@
 
             <div class="due-side">
               <button class="btn" style="width:100%;" onclick="window.__app.markAllDueDone('${word.id}')">一键完成本词今日全部复习</button>
+              <button class="btn btn-edit" style="width:100%; margin-top:8px;" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
             </div>
           </div>
         `;

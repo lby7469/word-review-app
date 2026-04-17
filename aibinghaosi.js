@@ -1,0 +1,2060 @@
+const STORAGE_KEY = "ebbinghaus_words_local_v1";
+    const SETTINGS_KEY = "ebbinghaus_settings_v1";
+    const ACTIVITY_KEY = "ebbinghaus_activity_v1";
+    const AUTH_TOKEN_KEY = "word_review_auth_token";
+    const INITIAL_TAB_KEY = "word_review_initial_tab";
+    const EDIT_WORD_ID_KEY = "word_review_edit_word_id";
+    const LOGIN_PAGE_URL = "/";
+    const APP_PAGE_URL = "/app";
+    const REVIEW_PAGE_URL = "/app/review";
+    const AUTH_ME_URL = "/api/auth/me";
+    const API_STATE_URL = "/api/state";
+    const LOOKUP_MEANING_API_URL = "/api/lookup/meaning";
+    const PRONUNCIATION_API_URL = "/api/lookup/pronunciation";
+    const DEFAULT_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
+    const REINFORCEMENT_INTERVALS = [0, 1, 2];
+    const MAX_MEANING_LENGTH = 24;
+    const ALL_WORDS_PAGE_SIZE = 50;
+    const TODAY_PAGE_SIZE = 50;
+    const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
+    let addSuccessTimer = null;
+
+    const state = {
+      words: [],
+      settings: { intervals: DEFAULT_INTERVALS.slice() },
+      activity: { checkinDates: [], lastActiveDate: "", reviewSession: { date: "", queue: [], revealed: false } },
+      currentTab: "today",
+      query: "",
+      sortBy: "newest",
+      onlyFavorites: false,
+      isFetchingMeaning: false,
+      isBulkRetranslating: false,
+      fetchError: "",
+      addSuccessMessage: "",
+      syncError: "",
+      syncStatus: "正在验证登录状态",
+      backendReady: false,
+      currentUser: null,
+      allWordsVisibleCount: ALL_WORDS_PAGE_SIZE,
+      todayVisibleCount: TODAY_PAGE_SIZE,
+      pronunciationCache: {},
+      lastSpokenWordId: "",
+      masteryArmed: { id: "", until: 0 },
+      editingMeaningId: "",
+      editingMeaningValue: "",
+      reviewSession: {
+        queue: [],
+        revealed: false,
+      },
+      checkinCalendarOffset: 0,
+      form: {
+        word: "",
+        meaning: "",
+        note: "",
+        learnedDate: "",
+        editingWordId: "",
+      },
+      lastActiveSnapshot: "",
+      revealState: {}
+    };
+
+    function getBeijingNow() {
+      const now = new Date();
+      return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Shanghai" }));
+    }
+
+    function formatDateCN(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function normalizeSelectedLearnedDate(value) {
+      return isDateString(value) ? value : todayDate();
+    }
+
+    function learnedDateToIsoString(dateStr) {
+      return new Date(`${dateStr}T00:00:00+08:00`).toISOString();
+    }
+
+    function addDays(dateStr, days) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      const utc = new Date(Date.UTC(y, m - 1, d));
+      utc.setUTCDate(utc.getUTCDate() + days);
+      const yy = utc.getUTCFullYear();
+      const mm = String(utc.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(utc.getUTCDate()).padStart(2, "0");
+      return `${yy}-${mm}-${dd}`;
+    }
+
+    function isDueOnOrBefore(targetDate, today) {
+      return targetDate <= today;
+    }
+
+    function isDateString(value) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+    }
+
+    function normalizeDailyReview(raw) {
+      const date = isDateString(raw?.date) ? raw.date : "";
+      const remainingShows = Number.isInteger(raw?.remainingShows) && raw.remainingShows > 0 ? raw.remainingShows : 0;
+      const totalShows = Number.isInteger(raw?.totalShows) && raw.totalShows >= remainingShows ? raw.totalShows : remainingShows;
+      return {
+        date,
+        remainingShows,
+        totalShows,
+      };
+    }
+
+    function diffDays(fromDate, toDate) {
+      if (!isDateString(fromDate) || !isDateString(toDate)) return 0;
+      const [fromY, fromM, fromD] = fromDate.split("-").map(Number);
+      const [toY, toM, toD] = toDate.split("-").map(Number);
+      const fromUtc = Date.UTC(fromY, fromM - 1, fromD);
+      const toUtc = Date.UTC(toY, toM - 1, toD);
+      return Math.floor((toUtc - fromUtc) / 86400000);
+    }
+
+    function normalizeActivity(raw) {
+      const checkinDates = Array.isArray(raw?.checkinDates)
+        ? Array.from(new Set(raw.checkinDates.filter((item) => isDateString(item)))).sort()
+        : [];
+      const reviewSessionDate = isDateString(raw?.reviewSession?.date) ? raw.reviewSession.date : "";
+      const reviewSessionQueue = Array.isArray(raw?.reviewSession?.queue)
+        ? raw.reviewSession.queue.filter((item) => typeof item === "string" && item.trim())
+        : [];
+
+      return {
+        checkinDates,
+        lastActiveDate: isDateString(raw?.lastActiveDate) ? raw.lastActiveDate : "",
+        reviewSession: {
+          date: reviewSessionDate,
+          queue: reviewSessionQueue,
+          revealed: raw?.reviewSession?.revealed === true,
+        },
+      };
+    }
+
+    function safeRead(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        return JSON.parse(raw);
+      } catch {
+        return fallback;
+      }
+    }
+
+    function getAuthToken() {
+      return localStorage.getItem(AUTH_TOKEN_KEY) || "";
+    }
+
+    function clearAuthToken() {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+
+    function redirectToLogin() {
+      window.location.href = LOGIN_PAGE_URL;
+    }
+
+    function isReviewRoute() {
+      return window.location.pathname.replace(/\/+$/, "") === REVIEW_PAGE_URL;
+    }
+
+    function navigateToAppHome() {
+      window.location.href = APP_PAGE_URL;
+    }
+
+    function navigateToReviewPage() {
+      window.location.href = REVIEW_PAGE_URL;
+    }
+
+    function navigateToAppTab(tab) {
+      sessionStorage.setItem(INITIAL_TAB_KEY, tab);
+      navigateToAppHome();
+    }
+
+    function consumeEditWordId() {
+      const wordId = sessionStorage.getItem(EDIT_WORD_ID_KEY);
+      if (wordId) {
+        sessionStorage.removeItem(EDIT_WORD_ID_KEY);
+      }
+      return wordId || "";
+    }
+
+    function consumeInitialTab() {
+      const tab = sessionStorage.getItem(INITIAL_TAB_KEY);
+      if (tab) {
+        sessionStorage.removeItem(INITIAL_TAB_KEY);
+      }
+      return tab;
+    }
+
+    async function apiRequest(url, options = {}) {
+      const token = getAuthToken();
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(options.headers || {}),
+        },
+        ...options,
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await response.json().catch(() => ({})) : {};
+
+      if (!response.ok) {
+        const error = new Error(data.error || `request_failed_${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+
+      return data;
+    }
+
+    function handleAuthExpired() {
+      state.currentUser = null;
+      clearAuthToken();
+      redirectToLogin();
+    }
+
+    async function loadCurrentUser() {
+      if (!getAuthToken()) {
+        redirectToLogin();
+        return false;
+      }
+
+      try {
+        const result = await apiRequest(AUTH_ME_URL);
+        state.currentUser = result.user || null;
+        return true;
+      } catch {
+        handleAuthExpired();
+        return false;
+      }
+    }
+
+    function persistLocalBackup() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.words));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+      localStorage.setItem(ACTIVITY_KEY, JSON.stringify(state.activity));
+    }
+
+    async function persist() {
+      persistLocalBackup();
+      if (!state.backendReady) return;
+
+      try {
+        await apiRequest(API_STATE_URL, {
+          method: "PUT",
+          body: JSON.stringify({
+            words: state.words,
+            settings: state.settings,
+            activity: state.activity,
+          }),
+        });
+        state.syncStatus = "已同步到云端";
+        state.syncError = "";
+      } catch (error) {
+        if (error.status === 401) {
+          handleAuthExpired();
+          return;
+        }
+        state.syncStatus = "云端同步失败，已保留本地备份";
+        state.syncError = "当前无法写入服务器，数据已暂存到本地浏览器。";
+      }
+    }
+    function buildMainPlan(learnedDate, intervals) {
+      return intervals.map((dayOffset, index) => ({
+        step: index + 1,
+        offset: dayOffset,
+        reviewDate: addDays(learnedDate, dayOffset),
+        source: "main",
+        label: `第 ${index + 1} 次主计划复习`,
+      }));
+    }
+
+    function buildReinforcementPlan(round) {
+      return round.intervals.map((dayOffset, index) => ({
+        step: index + 1,
+        offset: dayOffset,
+        reviewDate: addDays(round.baseDate, dayOffset),
+        source: "reinforcement",
+        reinforcementId: round.id,
+        label: `第 ${index + 1} 次强化复习`,
+      }));
+    }
+
+    function getAllPlannedSteps(word) {
+      const mainPending = buildMainPlan(word.learnedDate, word.intervals || DEFAULT_INTERVALS).filter(
+        (item) => !(word.completedReviews || []).includes(item.step)
+      );
+
+      const reinforcementPending = (word.reinforcementRounds || []).flatMap((round) =>
+        buildReinforcementPlan(round).filter((item) => !(round.completedSteps || []).includes(item.step))
+      );
+
+      return [...mainPending, ...reinforcementPending].sort((a, b) => {
+        if (a.reviewDate !== b.reviewDate) return a.reviewDate.localeCompare(b.reviewDate);
+        if (a.source !== b.source) return a.source === "main" ? -1 : 1;
+        return a.step - b.step;
+      });
+    }
+
+    function getNextPendingStep(word, today) {
+      for (const item of getAllPlannedSteps(word)) {
+        if (isDueOnOrBefore(item.reviewDate, today)) {
+          return item;
+        }
+      }
+      return null;
+    }
+
+    function getAllDueSteps(word, today) {
+      return getAllPlannedSteps(word).filter((item) => isDueOnOrBefore(item.reviewDate, today));
+    }
+
+    function getProgress(word) {
+      const mainTotal = (word.intervals || DEFAULT_INTERVALS).length;
+      const mainDone = (word.completedReviews || []).length;
+      const reinforcementTotal = (word.reinforcementRounds || []).reduce((sum, round) => sum + round.intervals.length, 0);
+      const reinforcementDone = (word.reinforcementRounds || []).reduce((sum, round) => sum + round.completedSteps.length, 0);
+      const total = mainTotal + reinforcementTotal;
+      const done = mainDone + reinforcementDone;
+      return {
+        total,
+        done,
+        percent: total > 0 ? Math.round((done / total) * 100) : 0,
+      };
+    }
+
+    function wordMatchesQuery(word, query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+
+      return [word.word, word.meaning, word.note]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q));
+    }
+
+    function normalizeMeaningText(text) {
+      return String(text || "")
+        .replace(/&amp;/gi, "&")
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/\s*([,，;；/])\s*/g, "$1")
+        .trim();
+    }
+
+    function getPronunciationLabel(word) {
+      const stored = word?.pronunciation || "";
+      if (stored) return `/${stored}/`;
+      const cached = state.pronunciationCache[word?.word || ""]?.phonetic || "";
+      if (cached) return `/${cached}/`;
+      return "US";
+    }
+
+    function trimMeaningText(text, maxLength = MAX_MEANING_LENGTH) {
+      let value = normalizeMeaningText(text)
+        .replace(/^(n|v|adj|adv|prep|pron|vt|vi|aux|num)\.\s*/i, "")
+        .replace(/^[：:;；,，/\-]+/, "")
+        .trim();
+
+      if (!value) return "";
+
+      const primaryParts = value
+        .split(/[；;\/,，]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      if (primaryParts.length > 1) {
+        const joined = primaryParts.slice(0, 2).join(" / ");
+        if (joined.length <= maxLength) {
+          return joined;
+        }
+        value = primaryParts[0];
+      }
+
+      value = value.split(/[。.!?！？]/)[0].trim();
+
+      if (value.length <= maxLength) {
+        return value;
+      }
+
+      const shortClause = value
+        .split(/[，,（(]/)
+        .map((item) => item.trim())
+        .find(Boolean);
+
+      if (shortClause && shortClause.length < value.length) {
+        value = shortClause;
+      }
+
+      return value.length <= maxLength ? value : value.slice(0, maxLength).trim();
+    }
+
+    function isUsefulMeaning(meaning, word) {
+      const cleaned = trimMeaningText(meaning);
+      if (!cleaned) return false;
+      return cleaned.toLowerCase() !== String(word || "").trim().toLowerCase();
+    }
+
+    async function fetchMeaning(word) {
+      const cleaned = word.trim();
+      if (!cleaned) return "";
+
+      const data = await apiRequest(LOOKUP_MEANING_API_URL, {
+        method: "POST",
+        body: JSON.stringify({ word: cleaned }),
+      });
+
+      const meaning = trimMeaningText(data?.meaning || "");
+      if (isUsefulMeaning(meaning, cleaned)) {
+        return meaning;
+      }
+
+      throw new Error("未查询到简短释义");
+    }
+
+    async function fetchPronunciation(word) {
+      const cleaned = word.trim();
+      if (!cleaned) return { speakUrl: "", phonetic: "" };
+      if (state.pronunciationCache[cleaned]) {
+        return state.pronunciationCache[cleaned];
+      }
+
+      const data = await apiRequest(PRONUNCIATION_API_URL, {
+        method: "POST",
+        body: JSON.stringify({ word: cleaned }),
+      });
+      const speakUrl = String(data?.speakUrl || "").trim();
+      const phonetic = String(data?.phonetic || "").trim();
+      const entry = { speakUrl, phonetic };
+      if (speakUrl || phonetic) {
+        state.pronunciationCache[cleaned] = entry;
+      }
+      return entry;
+    }
+
+    function playSpeechFallback(word) {
+      if (!("speechSynthesis" in window)) return;
+      const utter = new SpeechSynthesisUtterance(word);
+      utter.lang = "en-US";
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find((voice) => voice.lang === "en-US") || voices.find((voice) => voice.lang.startsWith("en"));
+      if (preferred) {
+        utter.voice = preferred;
+      }
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
+    async function playPronunciation(word) {
+      const cleaned = String(word || "").trim();
+      if (!cleaned) return;
+      try {
+        const entry = await fetchPronunciation(cleaned);
+        if (entry?.phonetic) {
+          let changed = false;
+          state.words = state.words.map((item) => {
+            if (item.word !== cleaned) return item;
+            if (item.pronunciation === entry.phonetic) return item;
+            changed = true;
+            return { ...item, pronunciation: entry.phonetic };
+          });
+          if (changed) {
+            void persist();
+            renderCurrentTab();
+          }
+        }
+        if (entry?.speakUrl) {
+          const audio = new Audio(entry.speakUrl);
+          await audio.play();
+          return;
+        }
+      } catch {}
+      playSpeechFallback(cleaned);
+    }
+
+    function normalizeWord(raw) {
+      const reinforcementRounds = Array.isArray(raw.reinforcementRounds)
+        ? raw.reinforcementRounds.map((round) => ({
+            id: round.id || crypto.randomUUID(),
+            createdAt: round.createdAt || new Date().toISOString(),
+            baseDate: round.baseDate || formatDateCN(getBeijingNow()),
+            intervals: Array.isArray(round.intervals) && round.intervals.length ? round.intervals : REINFORCEMENT_INTERVALS,
+            completedSteps: Array.isArray(round.completedSteps) ? round.completedSteps : [],
+          }))
+        : [];
+
+      return {
+        id: raw.id || crypto.randomUUID(),
+        word: raw.word || "",
+        meaning: raw.meaning || "",
+        note: raw.note || "",
+        favorite: raw.favorite === true,
+        pronunciation: raw.pronunciation || "",
+        learnedDate: raw.learnedDate || formatDateCN(getBeijingNow()),
+        createdAt: raw.createdAt || new Date().toISOString(),
+        intervals: Array.isArray(raw.intervals) && raw.intervals.length ? raw.intervals : DEFAULT_INTERVALS,
+        completedReviews: Array.isArray(raw.completedReviews) ? raw.completedReviews : [],
+        reinforcementRounds,
+        dailyReview: normalizeDailyReview(raw.dailyReview),
+        lapseCount: typeof raw.lapseCount === "number" ? raw.lapseCount : reinforcementRounds.length,
+      };
+    }
+    async function loadState() {
+      try {
+        const remote = await apiRequest(API_STATE_URL);
+        state.words = (remote.words || []).map(normalizeWord);
+        const settings = remote.settings || { intervals: DEFAULT_INTERVALS };
+        state.activity = normalizeActivity(remote.activity);
+        state.settings = {
+          intervals:
+            Array.isArray(settings.intervals) && settings.intervals.length
+              ? settings.intervals
+              : DEFAULT_INTERVALS.slice(),
+        };
+        state.backendReady = true;
+        state.syncStatus = "云端数据库已连接";
+        state.syncError = "";
+        persistLocalBackup();
+      } catch (error) {
+        if (error.status === 401) {
+          handleAuthExpired();
+          return;
+        }
+        state.words = safeRead(STORAGE_KEY, []).map(normalizeWord);
+        const settings = safeRead(SETTINGS_KEY, { intervals: DEFAULT_INTERVALS });
+        state.activity = normalizeActivity(safeRead(ACTIVITY_KEY, {}));
+        state.settings = {
+          intervals:
+            Array.isArray(settings.intervals) && settings.intervals.length
+              ? settings.intervals
+              : DEFAULT_INTERVALS.slice(),
+        };
+        state.backendReady = false;
+        state.syncStatus = "未连接服务器，当前使用本地数据";
+        state.syncError = "页面未连接到后端服务。部署到云服务器后，这里会自动切换到云端存储。";
+      }
+    }
+
+    function todayDate() {
+      return formatDateCN(getBeijingNow());
+    }
+
+    function getCheckinStats() {
+      const dates = normalizeActivity(state.activity).checkinDates;
+      const today = todayDate();
+      const checkedInToday = dates.includes(today);
+      const latestDate = dates[dates.length - 1] || "";
+
+      let streak = 0;
+      let cursor = latestDate;
+      while (cursor && dates.includes(cursor)) {
+        streak += 1;
+        cursor = addDays(cursor, -1);
+      }
+
+      return {
+        checkedInToday,
+        total: dates.length,
+        streak,
+        latestDate,
+      };
+    }
+
+    function getCalendarMonthDate(offset = 0) {
+      const now = getBeijingNow();
+      return new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    }
+
+    function formatCalendarTitle(date) {
+      return `${date.getFullYear()} 年 ${String(date.getMonth() + 1).padStart(2, "0")} 月`;
+    }
+
+    function getCalendarDays(offset = 0) {
+      const monthDate = getCalendarMonthDate(offset);
+      const year = monthDate.getFullYear();
+      const month = monthDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const weekdayOffset = (firstDay.getDay() + 6) % 7;
+      const calendarStart = new Date(year, month, 1 - weekdayOffset);
+
+      return Array.from({ length: 42 }, (_, index) => {
+        const current = new Date(calendarStart);
+        current.setDate(calendarStart.getDate() + index);
+        return {
+          date: formatDateCN(current),
+          day: current.getDate(),
+          inCurrentMonth: current.getMonth() === month,
+        };
+      });
+    }
+
+    function getBacklogSummary() {
+      const today = todayDate();
+      let missedWords = 0;
+      let missedUnits = 0;
+
+      for (const word of state.words) {
+        const units = groupStepsByReviewDate(getAllDueSteps(word, today).filter((item) => item.reviewDate < today));
+        if (units.length > 0) {
+          missedWords += 1;
+          missedUnits += units.length;
+        }
+      }
+
+      return {
+        missedWords,
+        missedUnits,
+        gapDays: state.lastActiveSnapshot ? Math.max(diffDays(state.lastActiveSnapshot, today), 0) : 0,
+      };
+    }
+
+    function touchLastActiveDate() {
+      const today = todayDate();
+      state.lastActiveSnapshot = state.activity.lastActiveDate || "";
+      if (state.activity.lastActiveDate === today) {
+        return;
+      }
+      state.activity.lastActiveDate = today;
+      void persist();
+    }
+
+    function checkInToday() {
+      const today = todayDate();
+      if (state.activity.checkinDates.includes(today)) {
+        renderTop();
+        return;
+      }
+      state.activity = normalizeActivity({
+        ...state.activity,
+        checkinDates: [...state.activity.checkinDates, today],
+      });
+      void persist();
+      renderTop();
+    }
+
+    function getStats() {
+      const today = todayDate();
+      const dueWords = state.words.filter((word) => getDailyReviewState(word, today)?.remainingShows > 0);
+      const totalDueSteps = state.words.reduce((sum, word) => sum + (getDailyReviewState(word, today)?.remainingShows || 0), 0);
+      const todayLearned = state.words.filter((word) => word.learnedDate === today).length;
+
+      return {
+        totalWords: state.words.length,
+        dueWords: dueWords.length,
+        totalDueSteps,
+        todayLearned,
+      };
+    }
+
+    function getDueToday() {
+      const today = todayDate();
+      return state.words
+        .map((word) => {
+          const dueUnits = getDueReviewUnits(word, today);
+          const dailyTask = getDailyReviewState(word, today, dueUnits);
+          return {
+            ...word,
+            dueUnits,
+            nextPending: getNextPendingUnit(word, today),
+            dailyTask,
+          };
+        })
+        .filter((word) => word.dailyTask?.remainingShows > 0)
+        .sort((a, b) => {
+          const aDate = a.nextPending?.reviewDate || today;
+          const bDate = b.nextPending?.reviewDate || today;
+          if (aDate !== bDate) return aDate.localeCompare(bDate);
+          if (a.learnedDate !== b.learnedDate) return a.learnedDate.localeCompare(b.learnedDate);
+          return a.createdAt.localeCompare(b.createdAt);
+        });
+    }
+
+    function syncReviewSessionActivity() {
+      const today = todayDate();
+      state.activity = {
+        ...state.activity,
+        reviewSession: {
+          date: today,
+          queue: [...state.reviewSession.queue],
+          revealed: state.reviewSession.revealed,
+        },
+      };
+    }
+
+    function restoreReviewSessionFromActivity() {
+      const today = todayDate();
+      const stored = state.activity?.reviewSession;
+      if (stored?.date === today && Array.isArray(stored.queue) && stored.queue.length) {
+        state.reviewSession.queue = stored.queue.slice();
+        state.reviewSession.revealed = stored.revealed === true;
+        normalizeReviewSessionQueue();
+        return;
+      }
+      state.reviewSession.queue = [];
+      state.reviewSession.revealed = false;
+    }
+
+    function buildReviewSessionQueue() {
+      return getDueToday().map((word) => word.id);
+    }
+
+    function getWordById(wordId) {
+      return state.words.find((word) => word.id === wordId) || null;
+    }
+
+    function getEnrichedWord(wordId) {
+      const word = getWordById(wordId);
+      if (!word) return null;
+      const today = todayDate();
+      const dueUnits = getDueReviewUnits(word, today);
+      return {
+        ...word,
+        dueUnits,
+        nextPending: getNextPendingUnit(word, today),
+        dailyTask: getDailyReviewState(word, today, dueUnits),
+      };
+    }
+
+    function normalizeReviewSessionQueue() {
+      const nextQueue = [];
+      for (const wordId of state.reviewSession.queue) {
+        const item = getEnrichedWord(wordId);
+        if (item && item.dailyTask?.remainingShows > 0) {
+          nextQueue.push(wordId);
+        }
+      }
+      state.reviewSession.queue = nextQueue;
+      return nextQueue;
+    }
+
+    function getCurrentSessionWord() {
+      const queue = normalizeReviewSessionQueue();
+      if (!queue.length) return null;
+      return getEnrichedWord(queue[0]);
+    }
+
+    function startReviewSession(reset = true) {
+      if (!isReviewRoute()) {
+        navigateToReviewPage();
+        return;
+      }
+      if (reset || !state.reviewSession.queue.length) {
+        state.reviewSession.queue = buildReviewSessionQueue();
+      }
+      state.reviewSession.revealed = false;
+      syncReviewSessionActivity();
+      void persist();
+      state.currentTab = "session";
+      render();
+    }
+
+    function finishReviewTurn(wordId) {
+      const currentId = state.reviewSession.queue[0];
+      if (currentId === wordId) {
+        state.reviewSession.queue.shift();
+      } else {
+        state.reviewSession.queue = state.reviewSession.queue.filter((id, index) => !(id === wordId && index !== 0));
+      }
+
+      const updated = getEnrichedWord(wordId);
+      if (updated && updated.dailyTask?.remainingShows > 0) {
+        state.reviewSession.queue.push(wordId);
+      }
+      state.reviewSession.revealed = false;
+      syncReviewSessionActivity();
+    }
+
+    function getFilteredWords() {
+      const today = todayDate();
+      const result = state.words
+        .filter((word) => wordMatchesQuery(word, state.query))
+        .filter((word) => (state.onlyFavorites ? word.favorite === true : true));
+
+      if (state.sortBy === "newest") {
+        return [...result].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      }
+      if (state.sortBy === "oldest") {
+        return [...result].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      }
+      if (state.sortBy === "due") {
+        return [...result].sort(
+          (a, b) => (getDailyReviewState(b, today)?.remainingShows || 0) - (getDailyReviewState(a, today)?.remainingShows || 0)
+        );
+      }
+      return result;
+    }
+
+    function groupStepsByReviewDate(steps) {
+      const groups = new Map();
+      for (const item of steps) {
+        const bucket = groups.get(item.reviewDate) || [];
+        bucket.push(item);
+        groups.set(item.reviewDate, bucket);
+      }
+
+      return Array.from(groups.entries())
+        .map(([reviewDate, items]) => ({
+          reviewDate,
+          items,
+          label: items.map((item) => item.label).join(" / "),
+        }))
+        .sort((a, b) => a.reviewDate.localeCompare(b.reviewDate));
+    }
+
+    function getDueReviewUnits(word, today) {
+      return groupStepsByReviewDate(getAllDueSteps(word, today));
+    }
+
+    function getDailyReviewState(word, today, dueUnits = null) {
+      const units = dueUnits || getDueReviewUnits(word, today);
+      if (!units.length) return null;
+
+      const stored = normalizeDailyReview(word.dailyReview);
+      if (stored.date === today && stored.remainingShows > 0) {
+        return stored;
+      }
+
+      return {
+        date: today,
+        remainingShows: 2,
+        totalShows: 2,
+      };
+    }
+
+    function getNextPendingUnit(word, today) {
+      const dueUnits = getDueReviewUnits(word, today);
+      return dueUnits[0] || null;
+    }
+
+    function getLapseMeta(lapseCount) {
+      if (!lapseCount || lapseCount <= 0) {
+        return {
+          badgeClass: "",
+          textClass: "",
+        };
+      }
+
+      if (lapseCount >= 3) {
+        return {
+          badgeClass: "high",
+          textClass: "high",
+        };
+      }
+
+      return {
+        badgeClass: "",
+        textClass: "",
+      };
+    }
+
+    function applyReviewItemsDone(wordId, items) {
+      state.words = state.words.map((word) => {
+        if (word.id !== wordId) return word;
+
+        const mainSet = new Set(word.completedReviews || []);
+        const reinforcementMap = new Map(
+          (word.reinforcementRounds || []).map((round) => [round.id, new Set(round.completedSteps || [])])
+        );
+
+        items.forEach((item) => {
+          if (item.source === "main") {
+            mainSet.add(item.step);
+          } else if (item.reinforcementId) {
+            reinforcementMap.get(item.reinforcementId)?.add(item.step);
+          }
+        });
+
+        return {
+          ...word,
+          completedReviews: Array.from(mainSet).sort((a, b) => a - b),
+          reinforcementRounds: (word.reinforcementRounds || []).map((round) => ({
+            ...round,
+            completedSteps: Array.from(reinforcementMap.get(round.id) || []).sort((a, b) => a - b),
+          })),
+        };
+      });
+    }
+
+    function setWordDailyReview(wordId, dailyReviewUpdater) {
+      state.words = state.words.map((word) => {
+        if (word.id !== wordId) return word;
+        const nextDailyReview = typeof dailyReviewUpdater === "function" ? dailyReviewUpdater(word) : dailyReviewUpdater;
+        return {
+          ...word,
+          dailyReview: normalizeDailyReview(nextDailyReview),
+        };
+      });
+    }
+
+    function applyAllDueDone(wordId, today = todayDate()) {
+      state.words = state.words.map((word) => {
+        if (word.id !== wordId) return word;
+
+        const mainSet = new Set(word.completedReviews || []);
+        const reinforcementMap = new Map(
+          (word.reinforcementRounds || []).map((round) => [round.id, new Set(round.completedSteps || [])])
+        );
+
+        getAllDueSteps(word, today).forEach((item) => {
+          if (item.source === "main") {
+            mainSet.add(item.step);
+          } else if (item.reinforcementId) {
+            reinforcementMap.get(item.reinforcementId)?.add(item.step);
+          }
+        });
+
+        return {
+          ...word,
+          completedReviews: Array.from(mainSet).sort((a, b) => a - b),
+          reinforcementRounds: (word.reinforcementRounds || []).map((round) => ({
+            ...round,
+            completedSteps: Array.from(reinforcementMap.get(round.id) || []).sort((a, b) => a - b),
+          })),
+          dailyReview: normalizeDailyReview({ date: today, remainingShows: 0, totalShows: 0 }),
+        };
+      });
+    }
+
+    function applyWordDailyAnswer(wordId, isKnown) {
+      const target = getWordById(wordId);
+      const today = todayDate();
+      if (!target) return;
+
+      const dailyTask = getDailyReviewState(target, today);
+      if (!dailyTask) return;
+
+      if (isKnown) {
+        const nextRemaining = dailyTask.remainingShows - 1;
+        if (nextRemaining <= 0) {
+          applyAllDueDone(wordId, today);
+          return;
+        }
+        setWordDailyReview(wordId, {
+          date: today,
+          remainingShows: nextRemaining,
+          totalShows: dailyTask.totalShows,
+        });
+        return;
+      }
+
+      state.words = state.words.map((word) => {
+        if (word.id !== wordId) return word;
+        return {
+          ...word,
+          lapseCount: (word.lapseCount || 0) + 1,
+          dailyReview: normalizeDailyReview({
+            date: today,
+            remainingShows: 3,
+            totalShows: 3,
+          }),
+        };
+      });
+    }
+
+    function markWordKnown(wordId) {
+      applyWordDailyAnswer(wordId, true);
+      void persist();
+      render();
+    }
+
+    function markWordUnknown(wordId) {
+      applyWordDailyAnswer(wordId, false);
+      void persist();
+      render();
+    }
+
+    function toggleFavorite(wordId) {
+      state.words = state.words.map((word) =>
+        word.id === wordId
+          ? {
+              ...word,
+              favorite: !word.favorite,
+            }
+          : word
+      );
+      void persist();
+      render();
+    }
+
+    function markMastered(wordId) {
+      const now = Date.now();
+      if (state.masteryArmed.id === wordId && state.masteryArmed.until > now) {
+        state.masteryArmed = { id: "", until: 0 };
+        deleteWord(wordId);
+        showInlineMessage("已标熟并移除该单词");
+        return;
+      }
+      state.masteryArmed = { id: wordId, until: now + 5000 };
+      showInlineMessage("再次点击“标熟”将永久移除");
+    }
+
+    function startMeaningEdit(wordId) {
+      const target = getWordById(wordId);
+      if (!target) return;
+      state.editingMeaningId = wordId;
+      state.editingMeaningValue = target.meaning || "";
+      renderCurrentTab();
+      requestAnimationFrame(() => {
+        const input = document.querySelector(`.meaning-edit-input[data-word-id="${wordId}"]`);
+        if (input instanceof HTMLInputElement) {
+          input.focus();
+          input.select();
+        }
+      });
+    }
+
+    function cancelMeaningEdit() {
+      state.editingMeaningId = "";
+      state.editingMeaningValue = "";
+      renderCurrentTab();
+    }
+
+    function saveMeaningEdit(wordId) {
+      const nextMeaning = String(state.editingMeaningValue || "").trim();
+      state.words = state.words.map((word) =>
+        word.id === wordId
+          ? {
+              ...word,
+              meaning: nextMeaning,
+            }
+          : word
+      );
+      state.editingMeaningId = "";
+      state.editingMeaningValue = "";
+      void persist();
+      renderCurrentTab();
+    }
+
+    function handleMeaningInputKeydown(event, wordId) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveMeaningEdit(wordId);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelMeaningEdit();
+      }
+    }
+
+    function isTypingContext(target) {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+    }
+
+    function handleSessionHotkey(key) {
+      if (state.currentTab !== "session") return false;
+      const current = getCurrentSessionWord();
+      if (!current) return false;
+      if (state.editingMeaningId === current.id) return false;
+
+      if (key === "ArrowRight") {
+        if (state.reviewSession.revealed) {
+          answerSessionKnown();
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "Enter") {
+        if (!state.reviewSession.revealed) {
+          state.reviewSession.revealed = true;
+        }
+        startMeaningEdit(current.id);
+        return true;
+      }
+
+      if (key === "ArrowLeft") {
+        if (state.reviewSession.revealed) {
+          answerSessionUnknown();
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "ArrowDown") {
+        markMastered(current.id);
+        return true;
+      }
+
+      if (key === "ArrowUp") {
+        toggleFavorite(current.id);
+        return true;
+      }
+
+      return false;
+    }
+
+    function handleTodayHotkey(key) {
+      if (state.currentTab !== "today") return false;
+      const firstDueWord = getDueToday()[0];
+      if (!firstDueWord) return false;
+      if (state.editingMeaningId === firstDueWord.id) return false;
+      const revealed = !!state.revealState[firstDueWord.id];
+
+      if (key === "ArrowRight") {
+        if (revealed) {
+          markWordKnown(firstDueWord.id);
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "Enter") {
+        if (!revealed) {
+          state.revealState[firstDueWord.id] = true;
+        }
+        startMeaningEdit(firstDueWord.id);
+        return true;
+      }
+
+      if (key === "ArrowLeft") {
+        if (revealed) {
+          markWordUnknown(firstDueWord.id);
+          return true;
+        }
+        return false;
+      }
+
+      if (key === "ArrowDown") {
+        markMastered(firstDueWord.id);
+        return true;
+      }
+
+      if (key === "ArrowUp") {
+        toggleFavorite(firstDueWord.id);
+        return true;
+      }
+
+      return false;
+    }
+
+    function handleReviewHotkey(key) {
+      return handleSessionHotkey(key) || handleTodayHotkey(key);
+    }
+
+    function revealSessionMeaning() {
+      const current = getCurrentSessionWord();
+      if (!current) return;
+      state.reviewSession.revealed = true;
+      render();
+    }
+
+    function answerSessionKnown() {
+      const current = getCurrentSessionWord();
+      if (!current) return;
+      applyWordDailyAnswer(current.id, true);
+      finishReviewTurn(current.id);
+      void persist();
+      render();
+    }
+
+    function answerSessionUnknown() {
+      const current = getCurrentSessionWord();
+      if (!current) return;
+      applyWordDailyAnswer(current.id, false);
+      finishReviewTurn(current.id);
+      void persist();
+      render();
+    }
+
+    function markAllTodayDone() {
+      const today = todayDate();
+      const dueWordIds = state.words
+        .filter((word) => getDailyReviewState(word, today)?.remainingShows > 0)
+        .map((word) => word.id);
+
+      if (!dueWordIds.length) return;
+
+      dueWordIds.forEach((wordId) => applyAllDueDone(wordId, today));
+      state.reviewSession.queue = [];
+      state.reviewSession.revealed = false;
+      state.lastSpokenWordId = "";
+      syncReviewSessionActivity();
+      showInlineMessage(`已一键完成今日全部复习（${dueWordIds.length} 个单词）`);
+      void persist();
+      render();
+    }
+
+    function markAllDueDone(wordId) {
+      applyAllDueDone(wordId);
+      void persist();
+      render();
+    }
+
+    function resetProgress(wordId) {
+      state.words = state.words.map((word) =>
+        word.id === wordId
+          ? { ...word, completedReviews: [], reinforcementRounds: [], dailyReview: normalizeDailyReview(), lapseCount: 0 }
+          : word
+      );
+      void persist();
+      render();
+    }
+
+    function deleteWord(wordId) {
+      state.words = state.words.filter((word) => word.id !== wordId);
+      delete state.revealState[wordId];
+      if (state.reviewSession.queue.length) {
+        state.reviewSession.queue = state.reviewSession.queue.filter((id) => id !== wordId);
+        syncReviewSessionActivity();
+      }
+      if (state.masteryArmed.id === wordId) {
+        state.masteryArmed = { id: "", until: 0 };
+      }
+      void persist();
+      render();
+    }
+
+    function startEditWord(wordId) {
+      const target = getWordById(wordId);
+      if (!target) return;
+
+      state.form = {
+        word: target.word || "",
+        meaning: target.meaning || "",
+        note: target.note || "",
+        learnedDate: normalizeSelectedLearnedDate(target.learnedDate),
+        editingWordId: target.id,
+      };
+      state.fetchError = "";
+      state.addSuccessMessage = "";
+      if (isReviewRoute()) {
+        sessionStorage.setItem(EDIT_WORD_ID_KEY, target.id);
+        navigateToAppTab("add");
+        return;
+      }
+
+      setTab("add");
+      render();
+      document.getElementById("input-word").focus();
+    }
+
+    function resetWordForm() {
+      state.form = {
+        word: "",
+        meaning: "",
+        note: "",
+        learnedDate: todayDate(),
+        editingWordId: "",
+      };
+    }
+
+    async function handleLookupMeaning() {
+      const word = state.form.word.trim();
+      if (!word) return;
+
+      state.isFetchingMeaning = true;
+      state.fetchError = "";
+      syncFormUI();
+
+      try {
+        const meaning = await fetchMeaning(word);
+        state.form.meaning = meaning || "未查询到中文释义";
+      } catch {
+        state.fetchError = "自动获取简短释义失败，你仍然可以手动修改词义后再保存。";
+      } finally {
+        state.isFetchingMeaning = false;
+        syncFormUI();
+      }
+    }
+
+    async function addWord() {
+      const cleanedWord = state.form.word.trim();
+      if (!cleanedWord) return;
+      const learnedDate = normalizeSelectedLearnedDate(state.form.learnedDate);
+      const editingWordId = state.form.editingWordId;
+
+      let finalMeaning = state.form.meaning.trim();
+
+      if (!finalMeaning) {
+        state.isFetchingMeaning = true;
+        state.fetchError = "";
+        syncFormUI();
+        try {
+          finalMeaning = await fetchMeaning(cleanedWord);
+        } catch {
+          state.fetchError = "自动获取简短释义失败，已保存单词；你之后仍可以手动补充词义。";
+        } finally {
+          state.isFetchingMeaning = false;
+          syncFormUI();
+        }
+      }
+
+      const item = normalizeWord({
+        id: editingWordId || crypto.randomUUID(),
+        word: cleanedWord,
+        meaning: finalMeaning || "",
+        note: state.form.note.trim(),
+        favorite: editingWordId ? getWordById(editingWordId)?.favorite === true : false,
+        pronunciation: editingWordId ? getWordById(editingWordId)?.pronunciation || "" : "",
+        learnedDate,
+        createdAt: editingWordId
+          ? (getWordById(editingWordId)?.createdAt || learnedDateToIsoString(learnedDate))
+          : learnedDateToIsoString(learnedDate),
+        intervals: state.settings.intervals.slice(),
+        completedReviews: editingWordId ? (getWordById(editingWordId)?.completedReviews || []) : [],
+        reinforcementRounds: editingWordId ? (getWordById(editingWordId)?.reinforcementRounds || []) : [],
+        dailyReview: editingWordId ? normalizeDailyReview(getWordById(editingWordId)?.dailyReview) : normalizeDailyReview(),
+        lapseCount: editingWordId ? (getWordById(editingWordId)?.lapseCount || 0) : 0,
+      });
+
+      if (editingWordId) {
+        state.words = state.words.map((word) => (word.id === editingWordId ? item : word));
+      } else {
+        state.words.unshift(item);
+      }
+      resetWordForm();
+      showAddToast(item);
+      void persist();
+      render();
+    }
+
+    async function retranslateAllMeanings() {
+      if (!state.words.length || state.isBulkRetranslating) return;
+
+      const confirmed = window.confirm(`将重新翻译当前账户下 ${state.words.length} 个单词的词义，并覆盖原有释义。是否继续？`);
+      if (!confirmed) return;
+
+      state.isBulkRetranslating = true;
+      state.fetchError = "";
+      state.addSuccessMessage = "";
+      syncFormUI();
+
+      let successCount = 0;
+
+      try {
+        for (let index = 0; index < state.words.length; index += 1) {
+          const current = state.words[index];
+          try {
+            const meaning = await fetchMeaning(current.word);
+            if (!meaning) continue;
+            state.words[index] = normalizeWord({
+              ...current,
+              meaning,
+            });
+            successCount += 1;
+          } catch {}
+        }
+
+        if (successCount > 0) {
+          state.addSuccessMessage = `已重新翻译 ${successCount} 个单词`;
+          await persist();
+        } else {
+          state.fetchError = "批量重新翻译失败，未获取到新的词义。";
+        }
+      } finally {
+        state.isBulkRetranslating = false;
+        render();
+      }
+    }
+
+    function showAddToast(word) {
+      state.addSuccessMessage = `${word.word} · ${word.meaning || "暂无释义"}`;
+      syncFormUI();
+      if (addSuccessTimer) clearTimeout(addSuccessTimer);
+      addSuccessTimer = setTimeout(() => {
+        state.addSuccessMessage = "";
+        syncFormUI();
+      }, 3000);
+    }
+
+    function showInlineMessage(message) {
+      state.addSuccessMessage = message;
+      syncFormUI();
+      if (addSuccessTimer) clearTimeout(addSuccessTimer);
+      addSuccessTimer = setTimeout(() => {
+        state.addSuccessMessage = "";
+        syncFormUI();
+      }, 2500);
+    }
+    function focusAddWordInput() {
+      requestAnimationFrame(() => {
+        document.getElementById("input-word")?.focus();
+      });
+    }
+
+    function setTab(tab) {
+      const previousTab = state.currentTab;
+      state.currentTab = tab;
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tab);
+      });
+      document.getElementById("tab-today").classList.toggle("hidden", tab !== "today");
+      document.getElementById("tab-session").classList.toggle("hidden", tab !== "session");
+      document.getElementById("tab-calendar").classList.toggle("hidden", tab !== "calendar");
+      document.getElementById("tab-add").classList.toggle("hidden", tab !== "add");
+      document.getElementById("tab-all").classList.toggle("hidden", tab !== "all");
+      if (tab === "add" && previousTab !== "add") {
+        focusAddWordInput();
+      }
+      if (tab === "today" && previousTab !== "today") {
+        state.todayVisibleCount = TODAY_PAGE_SIZE;
+      }
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function syncFormUI() {
+      document.getElementById("input-word").value = state.form.word;
+      document.getElementById("input-meaning").value = state.form.meaning;
+      document.getElementById("input-note").value = state.form.note;
+      document.getElementById("input-learned-date").value = state.form.learnedDate;
+      document.getElementById("btn-lookup").disabled = state.isFetchingMeaning || !state.form.word.trim();
+      document.getElementById("btn-lookup").textContent = state.isFetchingMeaning ? "查询中" : "获取简短释义";
+      document.getElementById("btn-add-word").disabled = !state.form.word.trim();
+      document.getElementById("btn-add-word").textContent = state.form.editingWordId ? "保存修改" : "保存这个单词";
+      const retranslateBtn = document.getElementById("btn-retranslate-all");
+      if (retranslateBtn) {
+        retranslateBtn.disabled = state.isBulkRetranslating || !state.words.length;
+        retranslateBtn.textContent = state.isBulkRetranslating ? "重新翻译中..." : "重新翻译全部词义";
+      }
+      const errorEl = document.getElementById("fetch-error");
+      errorEl.textContent = [state.fetchError, state.syncError].filter(Boolean).join(" ");
+      errorEl.classList.toggle("hidden", !errorEl.textContent);
+      const successEl = document.getElementById("add-success-box");
+      const successTextEl = document.getElementById("add-success-text");
+      successTextEl.textContent = state.addSuccessMessage;
+      successEl.classList.toggle("hidden", !state.addSuccessMessage);
+    }
+
+    function renderCheckinPanel() {
+      const stats = getCheckinStats();
+      const statusEl = document.getElementById("checkin-status");
+      const streakEl = document.getElementById("checkin-streak");
+      const totalEl = document.getElementById("checkin-total");
+      const titleEl = document.getElementById("checkin-calendar-title");
+      const weekdaysEl = document.getElementById("checkin-weekdays");
+      const gridEl = document.getElementById("checkin-calendar-grid");
+      const buttonEl = document.getElementById("btn-checkin");
+      const monthDate = getCalendarMonthDate(state.checkinCalendarOffset);
+      const calendarDays = getCalendarDays(state.checkinCalendarOffset);
+      const today = todayDate();
+
+      statusEl.textContent = stats.checkedInToday ? "今日已签到" : "今日待签到";
+      streakEl.textContent = `${stats.streak} 天`;
+      totalEl.textContent = `${stats.total} 天`;
+      buttonEl.disabled = stats.checkedInToday;
+      buttonEl.textContent = stats.checkedInToday ? "今日已签到" : "今日签到";
+      titleEl.textContent = formatCalendarTitle(monthDate);
+      weekdaysEl.innerHTML = WEEKDAY_LABELS.map((item) => `<div class="checkin-weekday">${item}</div>`).join("");
+
+      gridEl.innerHTML = calendarDays
+        .map((item) => {
+          const checked = state.activity.checkinDates.includes(item.date);
+          const isToday = item.date === today;
+          return `
+            <div class="checkin-day ${checked ? "on" : "off"} ${isToday ? "today" : ""} ${item.inCurrentMonth ? "" : "other-month"}">
+              <strong>${item.day}</strong>
+              <span>${checked ? "已签" : "未签"}</span>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    function renderTop() {
+      const stats = getStats();
+      const checkinStats = getCheckinStats();
+
+      document.getElementById("today-record-date").textContent =
+        `${state.form.editingWordId ? "编辑模式" : "记录日期"}：${normalizeSelectedLearnedDate(state.form.learnedDate)}（可手动选择）`;
+      const userEl = document.getElementById("auth-username");
+      if (userEl) {
+        userEl.textContent = state.currentUser?.username || "未登录";
+      }
+
+      document.getElementById("stat-total-words").textContent = String(stats.totalWords);
+      document.getElementById("stat-today-learned").textContent = String(stats.todayLearned);
+      document.getElementById("stat-due-words").textContent = String(stats.dueWords);
+      document.getElementById("calendar-entry-title").textContent =
+        `${todayDate()} · ${checkinStats.checkedInToday ? "今日已签到" : "去签到"}`;
+      document.getElementById("calendar-entry-desc").textContent =
+        `连续签到 ${checkinStats.streak} 天，累计签到 ${checkinStats.total} 天。点击进入日历界面。`;
+    }
+
+    function renderToday() {
+      const dueToday = getDueToday();
+      const visibleDueToday = dueToday.slice(0, state.todayVisibleCount);
+      const backlog = getBacklogSummary();
+      const focusPanelEl = document.getElementById("today-focus-panel");
+      const listEl = document.getElementById("today-list");
+      const emptyEl = document.getElementById("today-empty");
+      const loadMoreWrapEl = document.getElementById("today-load-more-wrap");
+      const loadMoreBtnEl = document.getElementById("btn-load-more-today");
+      listEl.innerHTML = "";
+      focusPanelEl.innerHTML = `
+        <div class="focus-entry">
+          <div class="focus-copy">
+            <div class="focus-kicker">Focus Review</div>
+            <h2 class="section-title" style="margin-bottom:8px;">逐词复习模式</h2>
+            <div class="desc">
+              每个需要复习的单词今天默认展示 2 次。第一次点“认识”会回到队尾，第二次再点“认识”才算今天完成；如果任意一次点“不认识”，这个单词今天“剩余展示次数”会直接重置为 3 次。
+            </div>
+          </div>
+          <div class="focus-brief">
+            <div class="focus-brief-title">今日行动摘要</div>
+            <div class="focus-rule-list">
+              <div class="focus-rule">待过一遍的单词：${dueToday.length} 个</div>
+              <div class="focus-rule">错过的历史轮次：${backlog.missedUnits} 次</div>
+              <div class="focus-rule">建议先进入专注模式，把今天的队列完整走完。</div>
+            </div>
+            <div class="focus-actions">
+              <button class="btn" id="btn-start-session" ${dueToday.length ? "" : "disabled"}>开始专注复习</button>
+              <button class="btn btn-outline" id="btn-reset-session" ${dueToday.length ? "" : "disabled"}>重新生成队列</button>
+            </div>
+          </div>
+        </div>
+        ${
+          backlog.missedUnits > 0
+            ? `<div class="review-backlog">${
+                backlog.gapDays > 0
+                  ? `你距离上次上线已经 ${backlog.gapDays} 天，今天会补复习 ${backlog.missedWords} 个单词的 ${backlog.missedUnits} 个漏掉轮次。`
+                  : `今天有 ${backlog.missedWords} 个单词、共 ${backlog.missedUnits} 个轮次来自之前错过的复习日期。`
+              }</div>`
+            : ""
+        }
+        <div class="muted">当前共有 ${dueToday.length} 个待复习单词，进入后会按队列逐个展示。</div>
+      `;
+
+      if (!dueToday.length) {
+        emptyEl.classList.remove("hidden");
+        loadMoreWrapEl.classList.add("hidden");
+        return;
+      }
+
+      emptyEl.classList.add("hidden");
+      loadMoreWrapEl.classList.toggle("hidden", visibleDueToday.length >= dueToday.length);
+      loadMoreBtnEl.textContent = `\u52A0\u8F7D\u66F4\u591A (${visibleDueToday.length}/${dueToday.length})`;
+
+      for (const word of visibleDueToday) {
+        const favoriteLabel = word.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
+        const favoriteStar = word.favorite ? "★" : "☆";
+        const revealed = !!state.revealState[word.id];
+        const nextPending = getNextPendingStep(word, todayDate());
+        const lapseMeta = getLapseMeta(word.lapseCount || 0);
+        const remainingShows = word.dailyTask?.remainingShows || 0;
+        const phoneticLabel = escapeHtml(getPronunciationLabel(word));
+        const isEditingMeaning = state.editingMeaningId === word.id;
+        const meaningBlock = revealed
+          ? isEditingMeaning
+            ? `
+              <div style="margin-top:6px;">
+                <input class="input meaning-edit-input" data-word-id="${word.id}" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" onkeydown="window.__app.handleMeaningInputKeydown(event, '${word.id}')" placeholder="输入后按 Enter 保存词义" />
+              </div>
+            `
+            : `
+              <div class="meaning" onclick="window.__app.startMeaningEdit('${word.id}')" title="点击修改词义">${word.meaning ? escapeHtml(word.meaning) : "暂无释义"}</div>
+              ${word.note ? `<div class="muted" style="margin-top:10px;">${escapeHtml(word.note)}</div>` : ""}
+            `
+          : `<div class="muted">点击“显示词义”查看释义</div>`;
+
+        const dueStepsHtml = word.dueUnits
+          .map((unit) => `
+            <div class="pill">
+              ${escapeHtml(unit.label)}（应复习日期：${escapeHtml(unit.reviewDate)}）
+            </div>
+          `)
+          .join("");
+
+        const card = document.createElement("div");
+        card.className = "card surface-panel";
+        card.innerHTML = `
+          <div class="due-card">
+            <div class="due-actions-top-right">
+              <button class="star-btn" onclick="window.__app.toggleFavorite('${word.id}')" title="${favoriteLabel}">${favoriteStar}</button>
+            </div>
+            <div class="due-main">
+              <div class="due-top">
+                <div class="due-word">${escapeHtml(word.word)}</div>
+                <button class="phonetic-btn" onclick="window.__app.playPronunciation('${escapeHtml(word.word)}')">${phoneticLabel}</button>
+                ${word.lapseCount > 0 ? `<span class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${word.lapseCount} 次</span>` : ""}
+              </div>
+
+              <div class="review-panel">
+                <div class="muted">先看单词，自己回想词义</div>
+                <div class="review-meaning">${meaningBlock}</div>
+                <div class="review-actions">
+                  ${revealed ? "" : `<button class="btn" onclick="window.__app.toggleReveal('${word.id}', true)">显示词义</button>`}
+                  ${revealed ? `<button class="btn" onclick="window.__app.markWordKnown('${word.id}')">认识</button>` : ""}
+                  ${revealed ? `<button class="btn btn-danger" onclick="window.__app.markWordUnknown('${word.id}')">不认识</button>` : ""}
+                  <button class="btn btn-outline" onclick="window.__app.markMastered('${word.id}')">标熟</button>
+                </div>
+              </div>
+
+              <div class="muted">学习日期：${escapeHtml(word.learnedDate)}</div>
+              ${nextPending ? `<div class="muted" style="margin-top:6px;">当前优先复习：${escapeHtml(nextPending.label)}（${escapeHtml(nextPending.reviewDate)}）</div>` : ""}
+              <div class="muted" style="margin-top:6px;">今天还需展示：${remainingShows} 次</div>
+              <div class="pill-list" style="margin-top:12px;">${dueStepsHtml}</div>
+            </div>
+
+            <div class="due-side">
+              <button class="btn" style="width:100%;" onclick="window.__app.markAllDueDone('${word.id}')">一键完成本词今日全部复习</button>
+              <button class="btn btn-edit" style="width:100%;" onclick="window.__app.startEditWord('${word.id}')">修改词义</button>
+            </div>
+          </div>
+        `;
+        listEl.appendChild(card);
+      }
+    }
+
+    function renderSession() {
+      const panelEl = document.getElementById("session-panel");
+      const current = getCurrentSessionWord();
+      const totalWords = state.reviewSession.queue.length;
+
+      if (!current) {
+        panelEl.innerHTML = `
+          <div class="empty">
+            <div class="empty-copy">
+              <div style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">今日专注复习已完成</div>
+              <div>当前队列里已经没有待处理的单词了。你可以回到“今日复习”查看明细，或稍后再开始新一轮。</div>
+              <div class="focus-actions" style="justify-content:center; margin-top:18px;">
+                <button class="btn" id="btn-session-restart">重新扫描今日队列</button>
+                <button class="btn btn-outline" id="btn-session-back">返回今日复习</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const remainingShows = current.dailyTask?.remainingShows || 0;
+      const lapseMeta = getLapseMeta(current.lapseCount || 0);
+      const favoriteLabel = current.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
+      const favoriteStar = current.favorite ? "★" : "☆";
+      const phoneticLabel = escapeHtml(getPronunciationLabel(current));
+      const isEditingMeaning = state.editingMeaningId === current.id;
+      const meaningBlock = state.reviewSession.revealed
+        ? isEditingMeaning
+          ? `
+            <div style="width:100%; max-width:720px;">
+              <input class="input meaning-edit-input" data-word-id="${current.id}" value="${escapeHtml(state.editingMeaningValue)}" oninput="window.__app.updateMeaningDraft(this.value)" onkeydown="window.__app.handleMeaningInputKeydown(event, '${current.id}')" placeholder="输入后按 Enter 保存词义" />
+            </div>
+          `
+          : `
+            <div class="session-meaning" onclick="window.__app.startMeaningEdit('${current.id}')" title="点击修改词义">${current.meaning ? escapeHtml(current.meaning) : "暂无释义"}</div>
+            ${current.note ? `<div class="session-note">${escapeHtml(current.note)}</div>` : ""}
+          `
+        : `<div class="session-tip">先看单词，自己回想词义。准备好后再点击“显示词义”。</div>`;
+      panelEl.innerHTML = `
+        <div class="card session-card">
+          <div class="session-date-top">
+            <div class="session-badge">学习日期：${escapeHtml(current.learnedDate)}</div>
+          </div>
+          <div class="session-actions-top-left">
+            <button class="btn btn-edit" onclick="window.__app.startEditWord('${current.id}')">修改词义</button>
+          </div>
+          <div class="session-actions-top-right">
+            <button class="star-btn" onclick="window.__app.toggleFavorite('${current.id}')" title="${favoriteLabel}">${favoriteStar}</button>
+          </div>
+          <div>
+            <div class="session-top">
+              <div>
+                <div class="session-progress">当前队列还有 ${totalWords} 个单词待过一遍，${escapeHtml(current.word)} 今天还剩 ${remainingShows} 次待展示。</div>
+              </div>
+              <div class="focus-actions">
+                ${current.lapseCount > 0 ? `<div class="warn-badge ${lapseMeta.badgeClass}">遗忘 ${current.lapseCount} 次</div>` : ""}
+              </div>
+            </div>
+
+            <div class="session-main">
+              <div class="session-word">${escapeHtml(current.word)}</div>
+              <button class="phonetic-btn" onclick="window.__app.playPronunciation('${escapeHtml(current.word)}')">${phoneticLabel}</button>
+              ${meaningBlock}
+              ${state.reviewSession.revealed ? `<div class="session-tip">点“认识”会消耗今天 1 次展示额度；如果这是第二次顺利认出，这个单词今天就完成。点“不认识”会把今天剩余展示次数直接重置为 3。</div>` : ""}
+              <div class="session-actions fixed-actions">
+                ${state.reviewSession.revealed ? "" : `<button class="btn" id="btn-session-reveal">显示词义</button>`}
+                ${state.reviewSession.revealed ? `<button class="btn" id="btn-session-known">认识</button>` : ""}
+                ${state.reviewSession.revealed ? `<button class="btn btn-danger" id="btn-session-unknown">不认识</button>` : ""}
+                <button class="btn btn-outline" onclick="window.__app.markMastered('${current.id}')">标熟</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="session-footer">
+              <div class="session-meta">
+                当前优先复习：${escapeHtml(current.nextPending?.label || "已完成")}<br />
+              今日关联计划：${escapeHtml(current.dueUnits.map((unit) => unit.label).join("、"))}
+            </div>
+            <div class="focus-actions">
+              <button class="btn" id="btn-session-complete-all">一键完成当日所有复习</button>
+              <button class="btn btn-outline" id="btn-session-rescan">重新生成队列</button>
+              <button class="btn btn-outline" id="btn-session-exit">返回今日复习</button>
+            </div>
+          </div>
+        </div>
+      `;
+      if (state.lastSpokenWordId !== current.id) {
+        state.lastSpokenWordId = current.id;
+        void playPronunciation(current.word);
+      }
+    }
+
+    function renderAllWords() {
+      const today = todayDate();
+      const words = getFilteredWords();
+      const visibleWords = words.slice(0, state.allWordsVisibleCount);
+      const cardsEl = document.getElementById("all-cards");
+      const emptyEl = document.getElementById("all-empty");
+      const loadMoreWrapEl = document.getElementById("all-load-more-wrap");
+      const loadMoreBtnEl = document.getElementById("btn-load-more-all");
+      const favoritesBtnEl = document.getElementById("btn-toggle-favorites");
+      cardsEl.innerHTML = "";
+      if (favoritesBtnEl) {
+        favoritesBtnEl.textContent = state.onlyFavorites ? "全部单词" : "仅看收藏";
+      }
+
+      if (!words.length) {
+        emptyEl.classList.remove("hidden");
+        loadMoreWrapEl.classList.add("hidden");
+        return;
+      }
+
+      emptyEl.classList.add("hidden");
+      loadMoreWrapEl.classList.toggle("hidden", visibleWords.length >= words.length);
+      loadMoreBtnEl.textContent = `\u52A0\u8F7D\u66F4\u591A (${visibleWords.length}/${words.length})`;
+
+      for (const word of visibleWords) {
+        const favoriteLabel = word.favorite ? "\u53D6\u6D88\u6536\u85CF" : "\u6536\u85CF";
+        const lapseMeta = getLapseMeta(word.lapseCount || 0);
+        const plan = [
+          ...buildMainPlan(word.learnedDate, word.intervals || DEFAULT_INTERVALS).map((item) => ({
+            ...item,
+            done: (word.completedReviews || []).includes(item.step),
+          })),
+          ...(word.reinforcementRounds || []).flatMap((round) =>
+            buildReinforcementPlan(round).map((item) => ({
+              ...item,
+              done: (round.completedSteps || []).includes(item.step),
+            }))
+          ),
+        ].sort((a, b) => {
+          if (a.reviewDate !== b.reviewDate) return a.reviewDate.localeCompare(b.reviewDate);
+          if (a.source !== b.source) return a.source === "main" ? -1 : 1;
+          return a.step - b.step;
+        });
+
+        const dueUnits = getDueReviewUnits(word, today);
+        const progress = getProgress(word);
+
+        const planHtml = plan
+          .map((item) => {
+            const due = item.reviewDate <= today && !item.done;
+            const statusClass = item.done ? "done" : due ? "due" : "future";
+            const statusText = item.done ? "已完成" : due ? "待复习" : "未到期";
+
+            return `
+              <div class="plan-item">
+                <span>${escapeHtml(item.label)} · 第 ${item.offset} 天 · ${escapeHtml(item.reviewDate)}</span>
+                <span class="status ${statusClass}">${statusText}</span>
+              </div>
+            `;
+          })
+          .join("");
+
+        const card = document.createElement("div");
+        card.className = "card word-card";
+        card.innerHTML = `
+          <div class="word-header">
+            <div>
+              <div class="word-title">${escapeHtml(word.word)}</div>
+              <div class="word-meta" style="margin-top:6px;">
+                学习日期：${escapeHtml(word.learnedDate)}${word.meaning ? ` · ${escapeHtml(word.meaning)}` : ""}
+              </div>
+            </div>
+            <div class="icon-btns">
+              <button class="icon-btn" title="编辑单词" onclick="window.__app.startEditWord('${word.id}')">编辑</button>
+              <button class="icon-btn" title="收藏单词" onclick="window.__app.toggleFavorite('${word.id}')">${favoriteLabel}</button>
+              <button class="icon-btn" title="重置进度" onclick="window.__app.resetProgress('${word.id}')">重置</button>
+              <button class="icon-btn" title="删除单词" onclick="window.__app.deleteWord('${word.id}')">删除</button>
+            </div>
+          </div>
+
+          ${word.note ? `<div class="word-note">${escapeHtml(word.note)}</div>` : ""}
+          ${word.lapseCount > 0 ? `<div class="lapse-text ${lapseMeta.textClass}">遗忘次数：${word.lapseCount}</div>` : ""}
+
+          <div class="progress-wrap">
+            <div class="progress-row">
+              <span>复习进度</span>
+              <span>${progress.done}/${progress.total}</span>
+            </div>
+            <div class="progress"><div class="progress-bar" style="width:${progress.percent}%;"></div></div>
+          </div>
+
+          <div class="plan-box" style="margin-top:14px;">
+            <div style="font-size:14px; font-weight:700;">复习计划</div>
+            ${planHtml}
+          </div>
+
+          ${dueUnits.length > 0 ? `<div class="footer-due" style="margin-top:14px;">当前待复习：${escapeHtml(dueUnits.map((s) => s.label).join("、"))}</div>` : ""}
+        `;
+        cardsEl.appendChild(card);
+      }
+    }
+
+    function renderCurrentTab() {
+      if (state.currentTab === "today") {
+        renderToday();
+        return;
+      }
+      if (state.currentTab === "session") {
+        renderSession();
+        return;
+      }
+      if (state.currentTab === "calendar") {
+        renderCheckinPanel();
+        return;
+      }
+      if (state.currentTab === "all") {
+        renderAllWords();
+      }
+    }
+
+    function render() {
+      renderTop();
+      syncFormUI();
+      setTab(state.currentTab);
+      renderCurrentTab();
+    }
+
+    function bindEvents() {
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (isReviewRoute()) {
+            navigateToAppTab(btn.dataset.tab);
+            return;
+          }
+          setTab(btn.dataset.tab);
+          renderCurrentTab();
+        });
+      });
+
+      document.addEventListener("click", (event) => {
+        const target = event.target.closest("button");
+        if (!target) return;
+
+        if (target.id === "btn-start-session" || target.id === "btn-reset-session" || target.id === "btn-session-restart" || target.id === "btn-session-rescan") {
+          startReviewSession(true);
+          return;
+        }
+        if (target.id === "btn-session-back" || target.id === "btn-session-exit") {
+          navigateToAppTab("today");
+          return;
+        }
+        if (target.id === "btn-session-reveal") {
+          revealSessionMeaning();
+          return;
+        }
+        if (target.id === "btn-session-known") {
+          answerSessionKnown();
+          return;
+        }
+        if (target.id === "btn-session-unknown") {
+          answerSessionUnknown();
+          return;
+        }
+        if (target.id === "btn-session-complete-all") {
+          markAllTodayDone();
+        }
+      });
+
+      document.getElementById("btn-logout").addEventListener("click", async () => {
+        try {
+          await apiRequest("/api/auth/logout", { method: "POST" });
+        } catch {}
+        handleAuthExpired();
+      });
+      document.getElementById("btn-open-calendar").addEventListener("click", () => {
+        state.checkinCalendarOffset = 0;
+        setTab("calendar");
+        renderCurrentTab();
+      });
+      document.getElementById("btn-checkin").addEventListener("click", checkInToday);
+      document.getElementById("btn-calendar-back").addEventListener("click", () => {
+        setTab("today");
+        renderCurrentTab();
+      });
+      document.getElementById("btn-checkin-prev").addEventListener("click", () => {
+        state.checkinCalendarOffset -= 1;
+        renderCheckinPanel();
+      });
+      document.getElementById("btn-checkin-next").addEventListener("click", () => {
+        state.checkinCalendarOffset += 1;
+        renderCheckinPanel();
+      });
+      document.getElementById("btn-checkin-today").addEventListener("click", () => {
+        state.checkinCalendarOffset = 0;
+        renderCheckinPanel();
+      });
+      document.getElementById("btn-lookup").addEventListener("click", handleLookupMeaning);
+      document.getElementById("btn-add-word").addEventListener("click", addWord);
+
+      document.getElementById("input-word").addEventListener("input", (e) => {
+        const value = e.target.value;
+        const previous = state.form.word;
+        state.form.word = value;
+        if (previous !== value) {
+          state.form.meaning = "";
+        }
+        state.fetchError = "";
+        syncFormUI();
+      });
+
+      document.getElementById("input-word").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        if (!state.form.word.trim() || state.isFetchingMeaning) return;
+        void addWord();
+      });
+
+      document.getElementById("input-meaning").addEventListener("input", (e) => {
+        state.form.meaning = e.target.value;
+      });
+
+      document.getElementById("input-note").addEventListener("input", (e) => {
+        state.form.note = e.target.value;
+      });
+
+      document.getElementById("input-learned-date").addEventListener("input", (e) => {
+        state.form.learnedDate = normalizeSelectedLearnedDate(e.target.value);
+        renderTop();
+      });
+
+      document.getElementById("input-search").addEventListener("input", (e) => {
+        state.query = e.target.value;
+        state.allWordsVisibleCount = ALL_WORDS_PAGE_SIZE;
+        renderAllWords();
+      });
+
+      document.getElementById("btn-retranslate-all").addEventListener("click", () => {
+        void retranslateAllMeanings();
+      });
+
+      document.getElementById("btn-toggle-favorites").addEventListener("click", () => {
+        state.onlyFavorites = !state.onlyFavorites;
+        state.allWordsVisibleCount = ALL_WORDS_PAGE_SIZE;
+        renderAllWords();
+      });
+
+      document.getElementById("select-sort").addEventListener("change", (e) => {
+        state.sortBy = e.target.value;
+        state.allWordsVisibleCount = ALL_WORDS_PAGE_SIZE;
+        renderAllWords();
+      });
+
+      document.getElementById("btn-load-more-all").addEventListener("click", () => {
+        state.allWordsVisibleCount += ALL_WORDS_PAGE_SIZE;
+        renderAllWords();
+      });
+
+      document.getElementById("btn-load-more-today").addEventListener("click", () => {
+        state.todayVisibleCount += TODAY_PAGE_SIZE;
+        renderToday();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.defaultPrevented || event.isComposing || event.repeat) return;
+        if (isTypingContext(event.target)) return;
+        if (handleReviewHotkey(event.key)) {
+          event.preventDefault();
+        }
+      });
+    }
+
+    window.__app = {
+      toggleReveal(wordId, value) {
+        state.revealState[wordId] = value;
+        renderToday();
+      },
+      startEditWord(wordId) {
+        startEditWord(wordId);
+      },
+      markWordKnown(wordId) {
+        markWordKnown(wordId);
+      },
+      markWordUnknown(wordId) {
+        markWordUnknown(wordId);
+      },
+      markAllDueDone(wordId) {
+        markAllDueDone(wordId);
+      },
+      toggleFavorite(wordId) {
+        toggleFavorite(wordId);
+      },
+      markMastered(wordId) {
+        markMastered(wordId);
+      },
+      startMeaningEdit(wordId) {
+        startMeaningEdit(wordId);
+      },
+      cancelMeaningEdit() {
+        cancelMeaningEdit();
+      },
+      saveMeaningEdit(wordId) {
+        saveMeaningEdit(wordId);
+      },
+      handleMeaningInputKeydown(event, wordId) {
+        handleMeaningInputKeydown(event, wordId);
+      },
+      updateMeaningDraft(value) {
+        state.editingMeaningValue = value;
+      },
+      playPronunciation(word) {
+        void playPronunciation(word);
+      },
+      resetProgress(wordId) {
+        resetProgress(wordId);
+      },
+      deleteWord(wordId) {
+        deleteWord(wordId);
+      }
+    };
+
+    async function init() {
+      state.form.learnedDate = todayDate();
+      const loggedIn = await loadCurrentUser();
+      if (!loggedIn) return;
+      await loadState();
+      if (!state.currentUser) return;
+      touchLastActiveDate();
+      restoreReviewSessionFromActivity();
+      const initialTab = consumeInitialTab();
+      if (isReviewRoute()) {
+        state.currentTab = "session";
+        if (!state.reviewSession.queue.length) {
+          state.reviewSession.queue = buildReviewSessionQueue();
+          syncReviewSessionActivity();
+          void persist();
+        }
+      } else if (initialTab && ["today", "calendar", "add", "all"].includes(initialTab)) {
+        state.currentTab = initialTab;
+      } else if (state.currentTab === "session") {
+        state.currentTab = "today";
+      }
+      bindEvents();
+      const editWordId = consumeEditWordId();
+      if (editWordId) {
+        startEditWord(editWordId);
+        return;
+      }
+      render();
+    }
+
+    init();

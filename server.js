@@ -474,6 +474,16 @@ async function main() {
     res.redirect("/app");
   });
 
+  app.get("/aibinghaosi.css", (_req, res) => {
+    res.set("Cache-Control", "public, max-age=0, must-revalidate");
+    res.sendFile(path.join(__dirname, "aibinghaosi.css"));
+  });
+
+  app.get("/aibinghaosi.js", (_req, res) => {
+    res.set("Cache-Control", "public, max-age=0, must-revalidate");
+    res.sendFile(path.join(__dirname, "aibinghaosi.js"));
+  });
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, storage: mode, time: nowIso() });
   });
